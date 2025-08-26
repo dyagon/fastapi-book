@@ -10,7 +10,7 @@ def request_sync(url):
 
 @take_up_time
 def run():
-    for i in range(0, 50):
+    for _ in range(0, 50):
         request_sync("https://www.baidu.com")
 
 if __name__ == "__main__":
