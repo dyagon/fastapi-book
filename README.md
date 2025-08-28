@@ -7,12 +7,15 @@ uv venv
 uv sync
 ```
 
-## Chapter 1, sync and async
+## Chapter 1, GIL, io, sync and async
+
+- Python GIL: what it effects
+- async and await keywords
+- io libs: asyncio, trio, anyio
 
 ```bash
 uv run python -m fastapi_book.ch01.request_sync
 ```
-
 ```bash
 uv run python -m fastapi_book.ch01.request_async
 ```
@@ -58,7 +61,7 @@ uv run uvicorn fastapi_book.ch03.main:app --reload
 ```
 or
 ```bash
-uv run python -m fastapi_book.main:app --reload
+uv run uvicorn fastapi_book.main:app --reload
 ```
 but lifespan will not work in the subapp mode, need to run the ch03 main.py directly
 
@@ -78,6 +81,64 @@ uv run uvicorn fastapi_book.ch04.main:app --reload
 
 ## Chapter 5 Pydantic
 
+- BaseModel
+- validators
 
+
+```bash
+uv run uvicorn fastapi_book.ch05.main:app --reload 
+```
+
+
+test
+```
+curl -X POST "http://127.0.0.1:8000/users/" \
+-H "Content-Type: application/json" \
+-d '{
+    "username": "testuser",
+    "age": 30,
+    "password_old": "oldpassword1",
+    "password_new": "newpassword2"
+}'
+```
+
+## Chapter 6 Dependencies
+
+- python dependency injection
+- FastAPI dependencies, how to use Depends
+    - global dependencies
+    - route dependencies
+    - function dependencies
+
+serve: `uv run uvicorn fastapi_book.ch06.main:app --reload`
+
+test: 
+
+```bash
+curl http://localhost:8000/me
+# return 422 because no X-Token header
+
+curl "http://localhost:8000/me" -H "X-Token: fake" 
+# return 401 Unauthorized
+
+curl "http://localhost:8000/me" -H "X-Token:valid-user-token"
+# return {"username":"johndoe"}
+
+```
+see how global dependency works:
+```bash
+curl http://localhost:8000/users/1
+# return {"user_id":1,"db_connection":{"connection":"db_connection_object"}}
+``` 
+
+## Chapter 7 Middleware
+
+run: `uv run uvicorn fastapi_book.ch07.main:app --reload`
+
+test:
+```bash
+curl -X GET -i http://localhost:8000/test
+# return {"message": "This is a test endpoint."} with X-Process-Time header
+```
 
 

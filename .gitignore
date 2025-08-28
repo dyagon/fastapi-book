@@ -6,5 +6,10 @@ dist/
 wheels/
 *.egg-info
 
+# other language-specific ignores
+*.class
+target/
+
 # Virtual environments
 .venv
+

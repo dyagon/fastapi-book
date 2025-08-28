@@ -16,6 +16,11 @@ class AddressError(PydanticCustomError):
         )
 
 
+# reusable validator
+def strip_whitespace(v: str) -> str:
+    return v.strip()
+
+
 class Person(BaseModel):
     username: str
     password: str
@@ -60,6 +65,13 @@ class Person(BaseModel):
         return self
 
 
+class Post(BaseModel):
+    title: str
+    content: str
+
+    _strip_fields = field_validator("title", "content")(strip_whitespace)
+
+
 if __name__ == "__main__":
     try:
         person = Person(
@@ -86,3 +98,13 @@ if __name__ == "__main__":
         print("\nValidation Error:")
         print(e.errors(include_url=False))
         print("-----------------")
+
+    print("\n--- Testing Post model with whitespace stripping ---")
+    post_data = {
+        "title": "  My Post Title  ",
+        "content": "  Some interesting content.  "
+    }
+    post = Post(**post_data)
+    print(post)
+    assert post.title == "My Post Title"
+    assert post.content == "Some interesting content."
