@@ -142,3 +142,33 @@ curl -X GET -i http://localhost:8000/test
 ```
 
 
+## Chapter 8 Database with SQLAlchemy and Alembic
+
+- Sync and Async engines/sessions
+- Declarative base and models
+- Alembic for init and migration
+
+
+Alembic init
+```bash
+uv run alembic init alembic
+
+# create tables based on Base metadata
+uv run alembic revision --autogenerate -m "Initial migration" 
+uv run alembic upgrade head
+```
+
+run:
+```bash
+uv run uvicorn fastapi_book.ch08.main:app --reload
+```
+
+test:
+```bash
+curl -X POST "http://localhost:8000/user" -H "Content-Type: application/json" -d '{"username": "testuser", "email": "zhagnsan@example.com", "password": "securepassword"}'
+# return created user with id
+
+curl -X GET "http://localhost:8000/user/1"
+# return user with id 1
+```
+

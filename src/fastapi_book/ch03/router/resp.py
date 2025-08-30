@@ -63,7 +63,7 @@ async def stream_file(filename: str):
     To test this, first create a large dummy file. You can do this
     from your terminal:
     
-    `fallocate -l 100M large_file.bin`
+    `fallocate -l 100M large_file.bin` or `mkfile 100m large_file.bin`
     
     Then, access this endpoint: /stream-file/large_file.bin
     """
