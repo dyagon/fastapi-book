@@ -5,8 +5,6 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 
-
-
 dependencies = [
     "aiofiles>=24.1.0",
     "alembic>=1.16.5",
@@ -18,10 +16,16 @@ dependencies = [
     "psycopg2-binary>=2.9.10",
     "pydantic[email]>=2.11.7",
     "python-multipart>=0.0.20",
+    "redis>=5.0.0",
     "requests>=2.32.5",
     "sqlalchemy[asyncio]>=2.0.43",
     "trio>=0.30.0",
     "uvicorn[standard]>=0.35.0",
+]
+
+[dependency-groups]
+dev = [
+    "sqlacodegen>=3.0.0",
 ]
 
 [tool.setuptools.packages.find]

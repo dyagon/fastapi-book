@@ -6,8 +6,7 @@ from sqlalchemy.sql import func
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from ..db import Base, AsyncSessionLocal
-
+from ..db import Base
 
 class User(Base):
     __tablename__ = "users"

@@ -147,6 +147,7 @@ curl -X GET -i http://localhost:8000/test
 - Sync and Async engines/sessions
 - Declarative base and models
 - Alembic for init and migration
+- sqlacodegen, generate models from existing db
 
 
 Alembic init
@@ -172,3 +173,7 @@ curl -X GET "http://localhost:8000/user/1"
 # return user with id 1
 ```
 
+create models from existing db:
+```bash
+uv run sqlacodegen postgresql+asyncpg://user:password@localhost/fast
+```
