@@ -15,9 +15,11 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 # Import our database configuration and models
-from fastapi_book.db import ASYNC_DATABASE_URL, Base
+from fastapi_book.config import Base, get_settings
 # Import models so they are registered with Base.metadata
 from fastapi_book.ch08.user_model import User
+
+ASYNC_DATABASE_URL = get_settings().ASYNC_DATABASE_URL
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -13,7 +13,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 # Import our database configuration and models
-from fastapi_book.db import SYNC_DATABASE_URL, Base
+from fastapi_book.config import SYNC_DATABASE_URL, Base
 # Import models so they are registered with Base.metadata
 from fastapi_book.ch08.user_model import User
 

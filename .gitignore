@@ -13,3 +13,5 @@ target/
 # Virtual environments
 .venv
 docker/volumes
+.env*
+

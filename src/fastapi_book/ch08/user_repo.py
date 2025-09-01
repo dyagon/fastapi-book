@@ -4,7 +4,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from fastapi_book.dependencies import get_async_db
+from fastapi_book.context import get_async_db
 from .user_model import User
 
 class UserRepository:

@@ -109,6 +109,7 @@ curl -X POST "http://127.0.0.1:8000/users/" \
     - global dependencies
     - route dependencies
     - function dependencies
+- use async def dependencies all the way, in the main thread, no thread switch
 
 serve: `uv run uvicorn fastapi_book.ch06.main:app --reload`
 
@@ -148,6 +149,10 @@ curl -X GET -i http://localhost:8000/test
 - Declarative base and models
 - Alembic for init and migration
 - sqlacodegen, generate models from existing db
+- redis usage
+    - as cache
+    - as distributed lock
+    - as message broker ( pub/sub )
 
 
 Alembic init
@@ -176,4 +181,23 @@ curl -X GET "http://localhost:8000/user/1"
 create models from existing db:
 ```bash
 uv run sqlacodegen postgresql+asyncpg://user:password@localhost/fast
+```
+
+test redis cache:
+```bash
+curl -X GET "http://localhost:8000/user/1"
+```
+
+test redis pub/sub:
+```bash
+uv run python -m fastapi_book.ch08.redis.pubsub
+```
+
+test redis distributed lock and wallet debit:
+```bash
+curl -X POST "http://127.0.0.1:8000/wallets/user_123/pay?amount=10"
+# return {"user_id":"user_123","new_balance":90}
+
+curl -X POST "http://127.0.0.1:8000/wallets/user_123/pay?amount=10"
+# blocked
 ```
