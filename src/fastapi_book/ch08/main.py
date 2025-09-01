@@ -32,7 +32,7 @@ USER_WALLETS = {"user_123": 100.0}
 
 # --- API 端点 ---
 @app.post("/wallets/{user_id}/pay")
-@lock_manager.lock(key="wallet:{user_id}", blocking=False, blocking_timeout_s=5)
+@lock_manager.lock2(key="wallet:{user_id}", blocking=False, blocking_timeout_s=5)
 async def process_payment(user_id: str, amount: float):
     """
     处理支付。此操作被分布式锁保护，以防止并发支付导致余额错乱。
@@ -54,3 +54,4 @@ async def process_payment(user_id: str, amount: float):
     
     print(f">>> Critical section finished. New balance for {user_id} is {USER_WALLETS[user_id]} <<<")
     return {"user_id": user_id, "new_balance": USER_WALLETS[user_id]}
+

@@ -201,3 +201,57 @@ curl -X POST "http://127.0.0.1:8000/wallets/user_123/pay?amount=10"
 curl -X POST "http://127.0.0.1:8000/wallets/user_123/pay?amount=10"
 # blocked
 ```
+
+
+## Chapter 9 Security
+
+run:
+```bash
+uv run uvicorn fastapi_book.ch09.main:app --reload
+```
+
+### HTTP Basic Auth
+
+test:
+```bash
+curl -u admin:secret http://localhost:8000/http-basic/login
+# {"message":"Welcome, admin!"}     
+
+curl -u admin:wrongpassword http://localhost:8000/http-basic/login
+# {"detail":"Incorrect username or password"}
+```
+
+### HTTP Digest Auth
+
+test:
+```bash
+curl -i http://127.0.0.1:8000/http-digest/login
+```
+```text
+HTTP/1.1 401 Unauthorized
+date: Mon, 01 Sep 2025 08:57:26 GMT
+server: uvicorn
+www-authenticate: Digest realm="My FastAPI Protected Realm", qop="auth", nonce="eab32cc05e5aff9776d14f56f92f4ca2", algorithm="MD5"
+content-length: 25
+content-type: application/json
+```
+
+```bash
+curl --digest --user admin:secretpassword http://127.0.0.1:8000/http-digest/login
+# {"message":"Welcome, admin! You are accessing secret data."}%  
+curl --digest --user admin:wrongpassword http://127.0.0.1:8000/http-digest/login
+# {"detail":"Invalid username or password"}%
+```
+
+### API Key Auth
+test:
+```bash
+curl http://127.0.0.1:8000/api-key/secure
+# {"detail":"Missing API Key"}%  
+
+curl -H "X-API-Key: this-is-a-wrong-key" http://127.0.0.1:8000/api-key/secure
+# {"detail":"Invalid API Key"}
+
+curl -H "X-API-Key: my-secret-api-key-1234" http://127.0.0.1:8000/api-key/secure
+# {"message":"Hello from a secure endpoint! Your API key is '1234'."}
+```

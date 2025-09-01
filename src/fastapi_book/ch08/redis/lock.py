@@ -100,5 +100,66 @@ class DistributedLockManager:
             return wrapper
         return decorator
 
+    def lock2(
+        self,
+        key: str,
+        timeout_ms: int = 30000,
+        blocking: bool = True,
+        blocking_timeout_s: float = 10.0
+    ):
+        """
+        使用 Redis 原生锁的分布式锁装饰器工厂。
+
+        :param key: 锁的键模板，可引用函数参数，如 "user:{user_id}"。
+        :param timeout_ms: 锁的过期时间（租约），单位为毫秒。
+        :param blocking: 如果为 True，当锁被占用时，会等待直到获取锁或超时。
+                         如果为 False，会立即失败并抛出 LockAcquisitionError。
+        :param blocking_timeout_s: 阻塞模式下的总等待超时时间，单位为秒。
+        """
+        def decorator(func: Callable):
+            @functools.wraps(func)
+            async def wrapper(*args, **kwargs):
+                final_key = self._generate_final_key(key, func, *args, **kwargs)
+                
+                # 使用 Redis 原生锁
+                lock = self.redis_client.lock(
+                    name=final_key,
+                    timeout=timeout_ms / 1000.0,  # Redis lock expects seconds
+                    blocking=blocking,
+                    blocking_timeout=blocking_timeout_s if blocking else None
+                )
+                
+                acquired = False
+                try:
+                    # 尝试获取锁
+                    acquired = await lock.acquire()
+                    
+                    if not acquired:
+                        if not blocking:
+                            raise LockAcquisitionError(f"Could not acquire non-blocking lock for '{final_key}'")
+                        else:
+                            raise LockTimeoutError(f"Timeout while waiting to acquire lock for '{final_key}' after {blocking_timeout_s}s")
+                    
+                    print(f"--- [LOCK2] Acquired Redis native lock '{final_key}' ---")
+                    
+                    # 成功获取锁，执行被保护的业务逻辑
+                    return await func(*args, **kwargs)
+                
+                finally:
+                    # 只有在成功获取锁的情况下才尝试释放
+                    if acquired:
+                        try:
+                            if lock.owned():
+                                print(f"--- [LOCK2] Releasing Redis native lock '{final_key}' ---")
+                                await lock.release()
+                            else:
+                                print(f"--- [LOCK2] Lock '{final_key}' is no longer owned (may have expired) ---")
+                        except Exception as e:
+                            # 记录释放锁时的错误，但不要让它影响主要的业务逻辑
+                            print(f"--- [LOCK2] Error releasing lock '{final_key}': {e} ---")
+            
+            return wrapper
+        return decorator
+
 
 lock_manager = DistributedLockManager()

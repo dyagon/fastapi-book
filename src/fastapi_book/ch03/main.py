@@ -14,7 +14,7 @@ from .router.files import router as files_router
 from .router.resp import router as resp_router
 from .router.bgtask import router as bgtask_router
 
-
+from fastapi_book.utils import register_custom_docs
 
 app = FastAPI(
     title="FastAPI Book Chapter 3",
@@ -36,31 +36,10 @@ app.include_router(bgtask_router, tags=["bgtask"])
 async def hello():
     return {"message": "Hello, FastAPI Book Chapter 3!"}
 
-@app.get("/docs", include_in_schema=False)
-async def custom_swagger_ui_html(request: Request):
-    root_path = request.scope.get("root_path", "")
-    return get_swagger_ui_html(
-        openapi_url=f"{root_path}/openapi.json",
-        title=app.title + " - Swagger UI",
-        oauth2_redirect_url=f"{root_path}/docs/oauth2-redirect",
-        swagger_js_url="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js",
-        swagger_css_url="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css",
-    )
-
-@app.get("/docs/oauth2-redirect", include_in_schema=False)
-async def swagger_ui_redirect():
-    return get_swagger_ui_oauth2_redirect_html()
-
-@app.get("/redoc", include_in_schema=False)
-async def redoc_html(request: Request):
-    root_path = request.scope.get("root_path", "")
-    return get_redoc_html(
-        openapi_url=f"{root_path}/openapi.json",
-        title=app.title + " - ReDoc",
-        redoc_js_url="https://unpkg.com/redoc@2/bundles/redoc.standalone.js",
-    )
-
 
 @app.get("/ml-models", tags=["default"])
 async def get_ml_models():
     return {"loaded_models": list(ml_models.keys())}
+
+
+register_custom_docs(app)
