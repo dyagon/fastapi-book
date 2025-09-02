@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<head>
+    <title>OAuth2 Client App</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background-color: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; }
+        .user-info { background: #e8f5e8; padding: 1rem; border-radius: 4px; margin: 1rem 0; }
+        .error { background: #ffe6e6; padding: 1rem; border-radius: 4px; margin: 1rem 0; color: #d00; }
+        .success { background: #d4edda; padding: 1rem; border-radius: 4px; margin: 1rem 0; color: #155724; }
+        .actions { margin: 2rem 0; }
+        .btn { display: inline-block; padding: 0.75rem 1.5rem; margin: 0.5rem; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; border: none; cursor: pointer; }
+        .btn:hover { background-color: #0056b3; }
+        .btn:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-secondary:hover { background-color: #545b62; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-danger:hover { background-color: #c82333; }
+        .api-results { background: #f8f9fa; padding: 1rem; border-radius: 4px; margin: 1rem 0; border-left: 4px solid #007bff; }
+        pre { background: #f1f1f1; padding: 1rem; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; }
+        .loading { display: none; color: #007bff; font-style: italic; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OAuth2 Client Application</h1>
+        
+        <!-- Message area for dynamic messages -->
+        <div id="message-area">
+            {% if error %}
+                <div class="error">
+                    <strong>Error:</strong> {{ error }}
+                </div>
+            {% endif %}
+        </div>
+        
+        {% if user %}
+            <div class="user-info">
+                <h3>Welcome, {{ user.username }}!</h3>
+                <p><strong>Full Name:</strong> {{ user.full_name }}</p>
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                <p><strong>Scopes:</strong> {{ scopes | join(', ') }}</p>
+            </div>
+            
+            <div class="actions">
+                <h3>API Actions</h3>
+                <button onclick="getUserInfo()" class="btn" id="user-info-btn">Get User Info</button>
+                <button onclick="getAdminInfo()" class="btn" id="admin-info-btn">Get Admin Info</button>
+                <button onclick="refreshToken()" class="btn btn-secondary" id="refresh-btn">Refresh Token</button>
+                <a href="/logout" class="btn btn-danger">Logout</a>
+                <div class="loading" id="loading">Loading...</div>
+            </div>
+            
+            <div id="api-results" class="api-results hidden">
+                <h3>API Response:</h3>
+                <pre id="api-response"></pre>
+            </div>
+        {% else %}
+            <p>Welcome to the OAuth2 Client Application. Please login to access protected resources.</p>
+            
+            <div class="actions">
+                <a href="/login" class="btn">Login with OAuth2</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Utility functions
+        function showMessage(message, type = 'info') {
+            const messageArea = document.getElementById('message-area');
+            let messageClass;
+            
+            if (type === 'error') {
+                messageClass = 'error';
+            } else if (type === 'success') {
+                messageClass = 'success';
+            } else {
+                messageClass = 'user-info';
+            }
+            
+            messageArea.innerHTML = `<div class="${messageClass}">${message}</div>`;
+            
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageArea.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        function showLoading(show = true) {
+            const loading = document.getElementById('loading');
+            const buttons = ['user-info-btn', 'admin-info-btn', 'refresh-btn'];
+            
+            if (show) {
+                loading.style.display = 'inline';
+                buttons.forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.disabled = true;
+                });
+            } else {
+                loading.style.display = 'none';
+                buttons.forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.disabled = false;
+                });
+            }
+        }
+
+        function showApiResult(data) {
+            const resultsDiv = document.getElementById('api-results');
+            const responseElement = document.getElementById('api-response');
+            
+            responseElement.textContent = JSON.stringify(data, null, 2);
+            resultsDiv.classList.remove('hidden');
+            
+            // Scroll to results
+            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function hideApiResult() {
+            const resultsDiv = document.getElementById('api-results');
+            resultsDiv.classList.add('hidden');
+        }
+
+        // API call functions
+        async function makeApiCall(endpoint, description) {
+            try {
+                showLoading(true);
+                hideApiResult();
+                
+                const response = await fetch(`/api${endpoint}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showApiResult(data);
+                    showMessage(`${description} loaded successfully`, 'success');
+                } else {
+                    throw new Error(data.detail || `Failed to load ${description.toLowerCase()}`);
+                }
+            } catch (error) {
+                console.error(`Error loading ${description.toLowerCase()}:`, error);
+                showMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function getUserInfo() {
+            await makeApiCall('/user-info', 'User Info');
+        }
+
+        async function getAdminInfo() {
+            await makeApiCall('/admin-info', 'Admin Info');
+        }
+
+        async function refreshToken() {
+            try {
+                showLoading(true);
+                
+                const response = await fetch('/api/refresh');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Token refreshed successfully!', 'success');
+                } else {
+                    throw new Error(data.detail || 'Failed to refresh token');
+                }
+            } catch (error) {
+                console.error('Error refreshing token:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for any URL parameters that might indicate errors
+            const urlParams = new URLSearchParams(window.location.search);
+            const error = urlParams.get('error');
+            
+            if (error) {
+                showMessage(`Error: ${decodeURIComponent(error)}`, 'error');
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        });
+    </script>
+</body>
+</html>

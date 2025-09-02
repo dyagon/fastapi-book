@@ -15,3 +15,5 @@ target/
 docker/volumes
 .env*
 
+tmp/
+deprecated/

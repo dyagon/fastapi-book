@@ -7,7 +7,7 @@
             "request": "launch",
             "module": "uvicorn",
             "args": [
-                "fastapi_book.ch06.depend_func.main:app",
+                "fastapi_book.ch09.oauth2.main:app",
                 "--reload"
             ],
             "jinja": true,

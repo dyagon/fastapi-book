@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PKCE OAuth2 Demo - Vue 3 SPA</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #f0f0f0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .section.active {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .step-number.completed {
+            background: #28a745;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #155724;
+        }
+
+        .error-box {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #721c24;
+        }
+
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            word-break: break-all;
+        }
+
+        .token-display {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .scopes {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+
+        .scope-badge {
+            background: #e7f3ff;
+            color: #0066cc;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            border: 1px solid #b3d9ff;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status {
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .status.ready {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.in-progress {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.completed {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .api-test {
+            margin-top: 20px;
+        }
+
+        .api-test button {
+            margin: 5px;
+        }
+
+        .response-display {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>🔐 PKCE OAuth2 演示</h1>
+                <p>使用 Vue 3 单页应用演示 PKCE (Proof Key for Code Exchange) 流程</p>
+            </div>
+
+            <div class="content">
+                <!-- Step 1: PKCE Parameters Generation -->
+                <div class="section" :class="{ active: currentStep === 1 }">
+                    <h3>
+                        <span class="step-number" :class="{ completed: step1Completed }">1</span>
+                        生成 PKCE 参数
+                    </h3>
+                    <p>PKCE 需要生成 code_verifier 和 code_challenge 来确保安全性。</p>
+                    
+                    <button class="btn" @click="generatePKCE" :disabled="isLoading">
+                        <span v-if="isLoading" class="loading"></span>
+                        {{ step1Completed ? '重新生成 PKCE 参数' : '生成 PKCE 参数' }}
+                    </button>
+
+                    <div v-if="pkceParams.codeVerifier" class="info-box">
+                        <strong>生成的 PKCE 参数：</strong>
+                        <div class="code-block">
+                            <strong>Code Verifier:</strong><br>
+                            {{ pkceParams.codeVerifier }}
+                        </div>
+                        <div class="code-block">
+                            <strong>Code Challenge (S256):</strong><br>
+                            {{ pkceParams.codeChallenge }}
+                        </div>
+                        <div class="code-block">
+                            <strong>State:</strong><br>
+                            {{ pkceParams.state }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Authorization -->
+                <div class="section" :class="{ active: currentStep === 2 }">
+                    <h3>
+                        <span class="step-number" :class="{ completed: step2Completed }">2</span>
+                        用户授权
+                    </h3>
+                    <p>跳转到授权服务器进行用户登录和授权。</p>
+
+                    <div class="info-box">
+                        <strong>请求的权限范围：</strong>
+                        <div class="scopes">
+                            <span v-for="scope in requestedScopes" :key="scope" class="scope-badge">
+                                {{ scope }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <button class="btn" @click="startAuthorization" :disabled="!step1Completed || isLoading">
+                        开始授权流程
+                    </button>
+
+                    <div v-if="authorizationUrl" class="info-box">
+                        <strong>授权 URL：</strong>
+                        <div class="code-block">{{ authorizationUrl }}</div>
+                        <p><small>点击上面的按钮会自动跳转到此 URL</small></p>
+                    </div>
+
+                    <div v-if="authorizationCode" class="success-box">
+                        <strong>✅ 授权成功！</strong><br>
+                        收到授权码：<code>{{ authorizationCode }}</code>
+                    </div>
+                </div>
+
+                <!-- Step 3: Token Exchange -->
+                <div class="section" :class="{ active: currentStep === 3 }">
+                    <h3>
+                        <span class="step-number" :class="{ completed: step3Completed }">3</span>
+                        交换访问令牌
+                    </h3>
+                    <p>使用授权码和 code_verifier 交换访问令牌。</p>
+
+                    <button class="btn" @click="exchangeToken" :disabled="!step2Completed || isLoading">
+                        <span v-if="isLoading" class="loading"></span>
+                        交换访问令牌
+                    </button>
+
+                    <div v-if="tokenResponse" class="success-box">
+                        <strong>✅ 令牌获取成功！</strong>
+                        <div class="token-display">
+                            <div class="code-block">
+                                <pre>{{ JSON.stringify(tokenResponse, null, 2) }}</pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="tokenError" class="error-box">
+                        <strong>❌ 令牌交换失败：</strong><br>
+                        {{ tokenError }}
+                    </div>
+                </div>
+
+                <!-- Step 4: API Testing -->
+                <div class="section" :class="{ active: currentStep === 4 }">
+                    <h3>
+                        <span class="step-number" :class="{ completed: step4Completed }">4</span>
+                        测试 API 调用
+                    </h3>
+                    <p>使用获取的访问令牌调用受保护的 API 端点。</p>
+
+                    <div class="api-test">
+                        <button class="btn" @click="testUserInfo" :disabled="!step3Completed">
+                            获取用户信息
+                        </button>
+                        <button class="btn" @click="testAdminInfo" :disabled="!step3Completed">
+                            获取管理员信息
+                        </button>
+                        <button class="btn" @click="testUserMe" :disabled="!step3Completed">
+                            获取当前用户
+                        </button>
+                    </div>
+
+                    <div v-if="apiResponse" class="response-display">
+                        <strong>API 响应：</strong>
+                        <pre>{{ JSON.stringify(apiResponse, null, 2) }}</pre>
+                    </div>
+
+                    <div v-if="apiError" class="error-box">
+                        <strong>❌ API 调用失败：</strong><br>
+                        {{ apiError }}
+                    </div>
+                </div>
+
+                <!-- Status Summary -->
+                <div class="section">
+                    <h3>🔍 流程状态</h3>
+                    <div>
+                        <span class="status" :class="step1Completed ? 'completed' : 'ready'">
+                            步骤 1: {{ step1Completed ? '已完成' : '准备就绪' }}
+                        </span>
+                        <span class="status" :class="step2Completed ? 'completed' : (step1Completed ? 'ready' : 'in-progress')">
+                            步骤 2: {{ step2Completed ? '已完成' : (step1Completed ? '准备就绪' : '等待中') }}
+                        </span>
+                        <span class="status" :class="step3Completed ? 'completed' : (step2Completed ? 'ready' : 'in-progress')">
+                            步骤 3: {{ step3Completed ? '已完成' : (step2Completed ? '准备就绪' : '等待中') }}
+                        </span>
+                        <span class="status" :class="step4Completed ? 'completed' : (step3Completed ? 'ready' : 'in-progress')">
+                            步骤 4: {{ step4Completed ? '已完成' : (step3Completed ? '准备就绪' : '等待中') }}
+                        </span>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 20px;">
+                        <strong>💡 使用说明：</strong>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>确保 OAuth2 服务器运行在 http://localhost:8000</li>
+                            <li>测试账户：用户名 <code>alice</code>，密码 <code>wonderland</code></li>
+                            <li>或者：用户名 <code>bob</code>，密码 <code>builder</code></li>
+                            <li>这是一个公共客户端，使用 PKCE 确保安全性</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
