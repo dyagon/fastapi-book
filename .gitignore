@@ -17,3 +17,5 @@ docker/volumes
 
 tmp/
 deprecated/
+
+*.db

@@ -302,3 +302,23 @@ npm run dev
 
 - open: http://localhost:8002
 - follow the steps
+
+
+## Chapter 10, Short Url Project
+
+```
+uv run uvicorn fastapi_book.ch10.main:app --reload 
+```
+
+see http://127.0.0.1:8000/docs
+
+default user is admin:123456
+
+you can create short url for long url
+
+learned:
+- base project structure
+- how depends(tree) works
+- how dto(pydantic BaseModel) and models(sqlalchemy Base) convert to each other
+
+
