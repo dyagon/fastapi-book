@@ -15,11 +15,14 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 # Import our database configuration and models
-from fastapi_book.config import Base, get_settings
-# Import models so they are registered with Base.metadata
-from fastapi_book.ch08.user_model import User
+from chatroom.infra import Base, get_settings
 
-ASYNC_DATABASE_URL = get_settings().ASYNC_DATABASE_URL
+# Import models so they are registered with Base.metadata
+from chatroom.impl.repo.models import User
+
+PREFIX = "sqlalchemy."
+SQLALCHEMY_URL = PREFIX + "url"
+ASYNC_DATABASE_URL = get_settings().ASYNC_DATABASE_URI
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -31,7 +34,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Set the database URL from our configuration
-config.set_main_option("sqlalchemy.url", ASYNC_DATABASE_URL)
+config.set_main_option(SQLALCHEMY_URL, ASYNC_DATABASE_URL)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
@@ -55,7 +58,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = config.get_main_option(SQLALCHEMY_URL)
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -69,7 +72,12 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     """Run migrations with the given connection."""
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        version_table_schema="public",
+        include_schemas=True,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
@@ -78,12 +86,10 @@ def do_run_migrations(connection: Connection) -> None:
 async def run_async_migrations() -> None:
     """Run migrations in async mode."""
     configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = ASYNC_DATABASE_URL
-    
+    configuration[SQLALCHEMY_URL] = ASYNC_DATABASE_URL
+
     connectable = async_engine_from_config(
-        configuration,
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
+        configuration, prefix=PREFIX, poolclass=pool.NullPool
     )
 
     async with connectable.connect() as connection:
