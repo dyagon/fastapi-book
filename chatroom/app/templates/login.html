@@ -1,37 +1,64 @@
 <!DOCTYPE html>
-    <head>
-        <meta charset="utf-8">
-        <title>聊天室房间用户登入</title>
-    </head>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天室用户登录</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1>用户登录</h1>
+                <p>欢迎回到聊天室</p>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <strong>注意：</strong>这里仅做演示，实际应用中密码需要加密传输且不应使用GET方式提交！
+                </div>
+                
+                <form action="/api/v1/user/login_action" method="get">
+                    <div class="form-group">
+                        <label class="form-label" for="phone_number">用户号码</label>
+                        <input 
+                            type="text" 
+                            id="phone_number"
+                            name="phone_number" 
+                            class="form-input" 
+                            placeholder="请输入您的手机号码"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="password">用户密码</label>
+                        <input 
+                            type="password" 
+                            id="password"
+                            name="password" 
+                            class="form-input" 
+                            placeholder="请输入您的密码"
+                            required
+                        >
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        登录聊天室
+                    </button>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <p class="text-muted">
+                        还没有账号？ 
+                        <a href="/api/v1/user/register" class="link">立即注册</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
     
-    <body>
-        <form action="/api/v1/user/login_action" method="get" onsubmit="return check(this)">
-            用户号码: <input type="text" name="phone_number"><br>
-            用户密码: <input type="text" name="password"><br>
-            <input type="submit" value="登入房间聊天室" onclick="check(this.form)">
-        </form>
-        <p><b>注意：这里由于仅仅做演示而言，对于密码而言通常需要加密传输且不会使用GET方式提交！</b></p>
-    </body>
-    
-    <script type="text/javascript">
-        function check(form) {
-            if (form.username.value == '') {
-                alert("请输入用户名称!");
-                form.username.focus();
-                return false;
-            }
-            if (form.phone_number.value == '') {
-                alert("请输入用户号码!");
-                form.phone_number.focus();
-                return false;
-            }
-            if (form.password.value == '') {
-                alert("请输入用户密码!");
-                form.password.focus();
-                return false;
-            }
-            return true;
-        }
-    </script>
-    
-    </html>
+    <script src="/static/js/forms.js"></script>
+</body>
+</html>
