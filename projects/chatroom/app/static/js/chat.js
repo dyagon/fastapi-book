@@ -122,14 +122,35 @@ function createChatApp() {
       };
 
       // 登出功能
-      const logout = () => {
+      const logout = async () => {
         if (confirm('确定要退出聊天室吗？')) {
-          // 关闭WebSocket连接
-          if (socket.value) {
-            socket.value.close();
+          try {
+            // 关闭WebSocket连接
+            if (socket.value) {
+              socket.value.close();
+            }
+            
+            // 调用登出接口
+            const response = await fetch('/api/v1/user/logout_action', {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            });
+            
+            if (response.ok) {
+              // 登出成功，跳转到登录页面
+              window.location.href = '/login';
+            } else {
+              // 登出失败，仍然跳转到登录页面
+              console.warn('登出接口调用失败，但仍跳转到登录页面');
+              window.location.href = '/login';
+            }
+          } catch (error) {
+            console.error('登出过程中发生错误:', error);
+            // 即使出错也跳转到登录页面
+            window.location.href = '/login';
           }
-          // 跳转到登录页面
-          window.location.href = '/api/v1/user/login';
         }
       };
 

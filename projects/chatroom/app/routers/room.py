@@ -14,13 +14,6 @@ from ...impl import room_manager, UserInfo, Room
 router_chat = APIRouter(tags=["聊天室"])
 
 
-templates_dir = pathlib.Path(__file__).parent.parent / "templates"
-
-@router_chat.get("/api/v1/room/online")
-def index():
-    return FileResponse(templates_dir / "room.html")
-
-
 @router_chat.websocket_route("/api/v1/room/socketws")
 @router_chat.websocket_route("/api/v1/room/socketws/")
 class ChatRoomWebSocket(WebSocketEndpoint):
