@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<head>
+    <title>User Registration</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            background-color: #f4f4f4; 
+        }
+        .container { 
+            background: white; 
+            padding: 2rem; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+            width: 400px; 
+            max-width: 90%;
+        }
+        h1 { 
+            text-align: center; 
+            color: #333; 
+            margin-bottom: 2rem;
+        }
+        .form-group { 
+            margin-bottom: 1rem; 
+        }
+        label { 
+            display: block; 
+            margin-bottom: 0.5rem; 
+            color: #555; 
+            font-weight: 500;
+        }
+        input[type="text"], 
+        input[type="email"], 
+        input[type="password"], 
+        input[type="tel"] { 
+            width: 100%; 
+            padding: 0.75rem; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            box-sizing: border-box; 
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, 
+        input[type="email"]:focus, 
+        input[type="password"]:focus, 
+        input[type="tel"]:focus { 
+            outline: none; 
+            border-color: #007bff; 
+        }
+        .error { 
+            color: #dc3545; 
+            text-align: center; 
+            margin-bottom: 1rem; 
+            padding: 0.5rem;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+        }
+        .success { 
+            color: #155724; 
+            text-align: center; 
+            margin-bottom: 1rem; 
+            padding: 0.5rem;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+        }
+        button { 
+            width: 100%; 
+            padding: 0.75rem; 
+            background-color: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 1rem; 
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        button:hover { 
+            background-color: #218838; 
+        }
+        button:disabled { 
+            background-color: #6c757d; 
+            cursor: not-allowed; 
+        }
+        .login-link { 
+            text-align: center; 
+            margin-top: 1rem; 
+            color: #666; 
+        }
+        .login-link a { 
+            color: #007bff; 
+            text-decoration: none; 
+        }
+        .login-link a:hover { 
+            text-decoration: underline; 
+        }
+        .password-requirements {
+            font-size: 0.875rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>用户注册</h1>
+        
+        <div id="error-message" class="error" style="display: none;"></div>
+        <div id="success-message" class="success" style="display: none;"></div>
+        
+        <form id="register-form">
+            <div class="form-group">
+                <label for="username">用户名 *</label>
+                <input type="text" id="username" name="username" required 
+                       placeholder="请输入用户名" minlength="3" maxlength="20">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">邮箱 *</label>
+                <input type="email" id="email" name="email" required 
+                       placeholder="请输入邮箱地址">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">密码 *</label>
+                <input type="password" id="password" name="password" required 
+                       placeholder="请输入密码" minlength="6">
+                <div class="password-requirements">
+                    密码长度至少6位
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirm_password">确认密码 *</label>
+                <input type="password" id="confirm_password" name="confirm_password" required 
+                       placeholder="请再次输入密码">
+            </div>
+            
+            <div class="form-group">
+                <label for="full_name">姓名</label>
+                <input type="text" id="full_name" name="full_name" 
+                       placeholder="请输入真实姓名" maxlength="50">
+            </div>
+            
+            <div class="form-group">
+                <label for="phone">手机号</label>
+                <input type="tel" id="phone" name="phone" 
+                       placeholder="请输入手机号" pattern="^1[3-9]\d{9}$">
+            </div>
+            
+            <button type="submit" id="submit-btn">注册</button>
+            
+            <div class="loading" id="loading">
+                注册中，请稍候...
+            </div>
+        </form>
+        
+        <div class="login-link">
+            已有账号？ <a href="/login">立即登录</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const errorDiv = document.getElementById('error-message');
+            const successDiv = document.getElementById('success-message');
+            const submitBtn = document.getElementById('submit-btn');
+            const loadingDiv = document.getElementById('loading');
+            
+            // 隐藏之前的消息
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            // 获取表单数据
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            // 前端验证
+            if (data.password !== data.confirm_password) {
+                errorDiv.textContent = '两次输入的密码不一致';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            if (data.password.length < 6) {
+                errorDiv.textContent = '密码长度至少6位';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            if (data.username.length < 3) {
+                errorDiv.textContent = '用户名长度至少3位';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            // 验证手机号格式（如果填写了）
+            if (data.phone && !/^1[3-9]\d{9}$/.test(data.phone)) {
+                errorDiv.textContent = '请输入正确的手机号格式';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            // 显示加载状态
+            submitBtn.disabled = true;
+            loadingDiv.style.display = 'block';
+            
+            try {
+                // 发送注册请求
+                const response = await fetch('/api/v1/user/register_action', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: data.username,
+                        email: data.email,
+                        password: data.password,
+                        full_name: data.full_name || null,
+                        phone: data.phone || null
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // 注册成功
+                    successDiv.textContent = '注册成功！正在跳转到登录页面...';
+                    successDiv.style.display = 'block';
+                    
+                    // 清空表单
+                    this.reset();
+                    
+                    // 3秒后跳转到登录页面
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 3000);
+                } else {
+                    // 注册失败
+                    errorDiv.textContent = result.detail || '注册失败，请重试';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('注册请求失败:', error);
+                errorDiv.textContent = '网络错误，请检查网络连接后重试';
+                errorDiv.style.display = 'block';
+            } finally {
+                // 恢复按钮状态
+                submitBtn.disabled = false;
+                loadingDiv.style.display = 'none';
+            }
+        });
+        
+        // 实时密码确认验证
+        document.getElementById('confirm_password').addEventListener('input', function() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = this.value;
+            const errorDiv = document.getElementById('error-message');
+            
+            if (confirmPassword && password !== confirmPassword) {
+                this.style.borderColor = '#dc3545';
+            } else {
+                this.style.borderColor = '#ccc';
+                if (errorDiv.textContent === '两次输入的密码不一致') {
+                    errorDiv.style.display = 'none';
+                }
+            }
+        });
+        
+        // 用户名长度验证
+        document.getElementById('username').addEventListener('input', function() {
+            if (this.value.length > 0 && this.value.length < 3) {
+                this.style.borderColor = '#dc3545';
+            } else {
+                this.style.borderColor = '#ccc';
+            }
+        });
+        
+        // 密码长度验证
+        document.getElementById('password').addEventListener('input', function() {
+            if (this.value.length > 0 && this.value.length < 6) {
+                this.style.borderColor = '#dc3545';
+            } else {
+                this.style.borderColor = '#ccc';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 from fastapi import Depends
 
 from .user_repo import UserRepository
-from .redis.cache import cache
+from ..redis.cache import cache
 
 class UserService:
     def __init__(self, user_repo: UserRepository = Depends(UserRepository)):

@@ -1,16 +1,14 @@
 # src/fastapi_book/context.py
-import threading
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI
 from redis.asyncio import Redis, ConnectionPool
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from .config import get_settings
-from .ch08.redis.cache import cache
-from .ch08.redis.lock import lock_manager
+from .redis.cache import cache
+from .redis.lock import lock_manager
 
 
 class AppContext:
@@ -60,37 +58,3 @@ async def lifespan(app: FastAPI):
         await redis_pool.disconnect()
     print("资源清理完成。")
 
-
-async def get_app_context(request: Request) -> AppContext:
-    print(
-        "depends on get_app_context() called",
-        threading.current_thread().name,
-        threading.get_ident(),
-    )
-    return request.app.state.app_context
-
-
-async def get_redis_client(ctx: AppContext = Depends(get_app_context)) -> Redis:
-    print(
-        "depends on get_redis_client() called",
-        threading.current_thread().name,
-        threading.get_ident(),
-    )
-    return ctx.redis_client
-
-
-async def get_async_db(
-    ctx: AppContext = Depends(get_app_context),
-) -> AsyncGenerator[AsyncSession, None]:
-    print(
-        "depends on get_async_db() called",
-        threading.current_thread().name,
-        threading.get_ident(),
-    )
-    if not ctx.db_session_factory:
-        raise RuntimeError("数据库 Session 工厂未初始化！")
-    async with ctx.db_session_factory() as session:
-        try:
-            yield session
-        finally:
-            await session.close()

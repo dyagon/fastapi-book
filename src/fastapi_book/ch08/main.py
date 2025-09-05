@@ -3,8 +3,8 @@ import asyncio
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from ..context import lifespan
-from .user_route import route as user_route
+from .context import lifespan
+from .user.user_route import route as user_route
 from .redis.lock import lock_manager, LockAcquisitionError, LockTimeoutError
 
 app = FastAPI(lifespan=lifespan)

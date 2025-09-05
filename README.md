@@ -318,7 +318,8 @@ you can create short url for long url
 
 learned:
 - base project structure
-- how depends(tree) works
+- how depends(tree) works (use yield)
+- how oauth2 works
 - how dto(pydantic BaseModel) and models(sqlalchemy Base) convert to each other
 
 
