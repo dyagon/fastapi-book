@@ -42,6 +42,29 @@ services:
       retries: 3
       start_period: 30s
 
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:management-alpine
+    container_name: fastapi_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_VHOST: /
+    volumes:
+      - ./volumes/rabbitmq:/var/lib/rabbitmq
+    ports:
+      - "25672:5672"    # AMQP port
+      - "25673:15672"   # Management UI port
+    networks:
+      - fastapi_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
 # Custom network
 networks:
   fastapi_network:

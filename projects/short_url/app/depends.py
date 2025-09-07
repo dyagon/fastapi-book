@@ -4,9 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastapi import Depends
 
-from .db import SessionLocal
-
-from .service import UserService, ShortService
+from ..domain.service import UserService, ShortService
+from ..infra import SessionLocal
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     async with SessionLocal() as session:

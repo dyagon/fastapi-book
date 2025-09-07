@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, BackgroundTasks
 
-
 from fastapi.responses import RedirectResponse, PlainTextResponse
-from ..service import ShortService
-from ..depends import get_short_service
+from ..depends import get_short_service, ShortService
 
 router_short = APIRouter(tags=["short_url"])
 

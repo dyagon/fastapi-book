@@ -15,10 +15,11 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 # Import our database configuration and models
-from chatroom.infra import Base, get_settings
+from fastapi_book import Base, get_settings
 
 # Import models so they are registered with Base.metadata
-from chatroom.impl.repo.models import User
+# from projects.chatroom.impl.repo.models import User
+from projects.hospital.domain.models import Hospitalinfo, Doctorinfo, DoctorScheduling, DoctorSubscribeinfo
 
 PREFIX = "sqlalchemy."
 SQLALCHEMY_URL = PREFIX + "url"
@@ -75,7 +76,6 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        version_table_schema="public",
         include_schemas=True,
     )
 

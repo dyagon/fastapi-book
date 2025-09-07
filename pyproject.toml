@@ -33,10 +33,5 @@ dev = [
     "sqlacodegen>=3.0.0",
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-
-
 [tool.uv]
 index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"

@@ -1,15 +1,16 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
-
 class Settings(BaseSettings):
-    # 定义连接异步引擎数据库的URL地址
+
     ASYNC_DATABASE_URI: str
-    # 定义TOEKN的签名信息值
+    DB_DEBUG_ECHO: bool = False
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+    REDIS_URL: str
+
     TOKEN_SIGN_SECRET: str
     TOKEN_SIGN_ALGORITHM: str
-
-    REDIS_URL: str
 
     class Config:
         env_file = ".env"

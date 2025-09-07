@@ -38,7 +38,7 @@
 
 ```bash
 # 开发模式启动
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn projects.chatroom.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 访问 `http://localhost:8000` 查看应用。
@@ -83,21 +83,3 @@ WebSocket /api/v1/room/socketws?token=<jwt_token>
 - `login`: 用户加入
 - `logout`: 用户离开
 - `message`: 聊天消息
-
-## 🎨 界面预览
-
-### 登录页面
-- 现代化卡片式设计
-- 表单验证
-- 响应式布局
-
-### 注册页面
-- 用户友好的注册流程
-- 实时表单验证
-- 清晰的错误提示
-
-### 聊天室页面
-- 全屏布局设计
-- 左侧在线用户列表
-- 右侧聊天区域
-- 顶部导航栏（用户信息 + 登出）

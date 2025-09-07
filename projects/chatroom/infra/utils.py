@@ -2,7 +2,7 @@ from jose import jwt
 
 from typing import Any
 
-from .config import get_settings
+from fastapi_book import get_settings
 
 class AuthToeknHelper:
 
