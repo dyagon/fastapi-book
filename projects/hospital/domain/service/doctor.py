@@ -25,15 +25,13 @@ class DoctorService:
         else:
             dt = datetime.strptime(dt, "%Y-%m-%d").date()
 
-        doctor, doctor_scheduling_result = await self.doctor_repo.get_doctor_scheduling_info(dno, dt, enable)
-        print(doctor, doctor_scheduling_result)
-        
+        doctor, doctor_scheduling_result = await self.doctor_repo.get_doctor_scheduling_info(dno, dt, enable)        
 
         ams = []
         pms = []
 
         for s in doctor_scheduling_result:
-            if s.ampm == "am":
+            if s.ampm == "上午":
                 ams.append(s)
             else:
                 pms.append(s)

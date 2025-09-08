@@ -12,6 +12,7 @@ services:
     volumes:
       - ./volumes/db:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d  # Optional: for initialization scripts
+      - ./init-data:/init-data
     ports:
       - "25432:5432"
     networks:

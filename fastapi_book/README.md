@@ -1,11 +1,6 @@
 # Fastapi Book
 
-## setup
 
-```bash
-uv venv
-uv sync
-```
 
 ## Chapter 1, GIL, io, sync and async
 

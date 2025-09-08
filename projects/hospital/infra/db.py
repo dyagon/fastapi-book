@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 
 
 # URL地址格式
-from .config import get_settings
+from fastapi_book import get_settings
 
 # 创建异步引擎对象
 settings = get_settings()

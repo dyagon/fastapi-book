@@ -2,7 +2,7 @@
 
 from redis.asyncio import ConnectionPool, Redis
 
-from .config import get_settings
+from fastapi_book import get_settings
 
 redis_pool = ConnectionPool.from_url(
         get_settings().REDIS_URL,
