@@ -1,5 +1,5 @@
 # coding: utf-8
-from sqlalchemy import Column, Date, DateTime, Integer, SmallInteger, Text, UniqueConstraint, text,DECIMAL,Numeric
+from sqlalchemy import Column, Date, DateTime, Integer, Text, UniqueConstraint, text,DECIMAL,Numeric
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from ..infra import Base
 

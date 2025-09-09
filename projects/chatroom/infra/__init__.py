@@ -23,8 +23,6 @@ redis_pool = ConnectionPool.from_url(
         socket_timeout=5,  # 5 seconds timeout for operations
     )
 
-print(redis_pool)
 redis_client = Redis(connection_pool=redis_pool)
-print(redis_client)
 
 all = ["Base", "AuthToeknHelper", "SessionLocal", "get_settings", "redis_client"]

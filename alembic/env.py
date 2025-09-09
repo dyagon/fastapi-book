@@ -15,11 +15,12 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 # Import our database configuration and models
-from fastapi_book import Base, get_settings
+from fastapi_book import Base, get_settings, metadata
 
 # Import models so they are registered with Base.metadata
-# from projects.chatroom.impl.repo.models import User
+from projects.chatroom.impl.repo.models import User
 from projects.hospital.domain.models import Hospitalinfo, Doctorinfo, DoctorScheduling, DoctorSubscribeinfo
+from projects.wechat.domain.models import User, OAuthToken, PaymentOrder, PaymentNotify
 
 PREFIX = "sqlalchemy."
 SQLALCHEMY_URL = PREFIX + "url"
@@ -39,7 +40,7 @@ config.set_main_option(SQLALCHEMY_URL, ASYNC_DATABASE_URL)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = Base.metadata
+target_metadata = metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

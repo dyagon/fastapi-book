@@ -1,5 +1,12 @@
-from sqlalchemy.orm import DeclarativeBase
 
+# from sqlalchemy import MetaData
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.exc import SQLAlchemyError
+from typing import AsyncGenerator
+
+
+# metadata = MetaData()
 class Base(DeclarativeBase):
     pass
 
@@ -26,3 +33,17 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings():
     return Settings()
+
+settings = get_settings()
+async_engine = create_async_engine(
+    settings.ASYNC_DATABASE_URI,
+    echo=settings.DB_DEBUG_ECHO,
+    pool_size=settings.DB_POOL_SIZE,
+    max_overflow=settings.DB_MAX_OVERFLOW
+)
+
+# 创建异步的会话管理对象
+SessionLocal = async_sessionmaker(async_engine, expire_on_commit=False)
+
+
+from .utils import register_custom_docs

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>微信登录模拟</title>
+    <meta charset="UTF-8">
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            background-color: #f7f7f7; 
+        }
+        #container { 
+            background: white; 
+            padding: 2rem; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+            text-align: center; 
+            width: 350px; 
+        }
+        h2 { color: #333; margin-top: 0; }
+        p { color: #666; }
+        #qr-code-area img { border: 1px solid #eee; margin: 1rem 0; }
+        #confirm-area img { margin-bottom: 1rem; }
+        #confirm-area, #expired-area, #cancelled-area { display: none; }
+        .control-buttons {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+        .btn-scan { background-color: #07c160; color: white; }
+        .btn-scan:hover { background-color: #06ad56; }
+        .btn-confirm { background-color: #1890ff; color: white; }
+        .btn-confirm:hover { background-color: #40a9ff; }
+        .btn-cancel { background-color: #ff4d4f; color: white; }
+        .btn-cancel:hover { background-color: #ff7875; }
+        .btn:disabled {
+            background-color: #d9d9d9;
+            cursor: not-allowed;
+        }
+        .status-info {
+            font-size: 0.8rem;
+            color: #999;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="qr-code-area">
+            <h2>微信登录</h2>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ session_id }}" alt="QR Code" />
+            <p id="status-text">使用微信扫描二维码登录</p>
+            <div class="control-buttons">
+                <button class="btn btn-scan" onclick="simulateScan()">扫描</button>
+                <button class="btn btn-confirm" onclick="simulateConfirm()" disabled>确认</button>
+                <button class="btn btn-cancel" onclick="simulateCancel()">取消</button>
+            </div>
+            <div class="status-info">
+                <div>会话ID: {{ session_id }}</div>
+                <div>状态: <span id="current-status">未扫描</span></div>
+            </div>
+        </div>
+        <div id="confirm-area">
+            <img id="avatar" src="" width="80" height="80" style="border-radius: 50%;" />
+            <h3 id="nickname"></h3>
+            <p>扫描成功，请在手机上确认登录</p>
+            <div class="control-buttons">
+                <button class="btn btn-confirm" onclick="simulateConfirm()">确认登录</button>
+                <button class="btn btn-cancel" onclick="simulateCancel()">取消</button>
+            </div>
+            <div class="status-info">
+                <div>会话ID: {{ session_id }}</div>
+                <div>状态: <span id="current-status">已扫描</span></div>
+            </div>
+        </div>
+        <div id="expired-area">
+            <p style="color: #d9534f;">二维码已过期，请刷新页面重新生成</p>
+            <button class="btn btn-scan" onclick="location.reload()">刷新页面</button>
+        </div>
+        <div id="cancelled-area">
+            <p style="color: #d9534f;">登录已取消</p>
+            <button class="btn btn-scan" onclick="location.reload()">重新开始</button>
+        </div>
+    </div>
+
+    <script>
+        const sessionId = "{{ session_id }}";
+        const redirectUri = "{{ redirect_uri }}";
+        const stateParam = "{{ state_param }}";
+        const qrCodeArea = document.getElementById('qr-code-area');
+        const confirmArea = document.getElementById('confirm-area');
+        const expiredArea = document.getElementById('expired-area');
+        const cancelledArea = document.getElementById('cancelled-area');
+        const statusElement = document.getElementById('current-status');
+
+        // 模拟扫描
+        async function simulateScan() {
+            try {
+                const response = await fetch('/simulate/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+                if (response.ok) {
+                    console.log('扫描模拟成功');
+                }
+            } catch (error) {
+                console.error('扫描模拟失败:', error);
+            }
+        }
+
+        // 模拟确认
+        async function simulateConfirm() {
+            try {
+                const response = await fetch('/simulate/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+                if (response.ok) {
+                    console.log('确认模拟成功');
+                }
+            } catch (error) {
+                console.error('确认模拟失败:', error);
+            }
+        }
+
+        // 模拟取消
+        async function simulateCancel() {
+            try {
+                const response = await fetch('/simulate/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+                if (response.ok) {
+                    console.log('取消模拟成功');
+                }
+            } catch (error) {
+                console.error('取消模拟失败:', error);
+            }
+        }
+
+        // 状态轮询
+        const intervalId = setInterval(async () => {
+            try {
+                const response = await fetch(`/status?session_id=${sessionId}`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+
+                // 更新状态显示
+                const statusMap = {
+                    'UNSCANNED': '未扫描',
+                    'SCANNED': '已扫描',
+                    'CONFIRMED': '已确认',
+                    'EXPIRED': '已过期',
+                    'CANCELLED': '已取消'
+                };
+                statusElement.textContent = statusMap[data.status] || data.status;
+
+                switch(data.status) {
+                    case "SCANNED":
+                        qrCodeArea.style.display = 'none';
+                        confirmArea.style.display = 'block';
+                        if (data.user_info) {
+                            document.getElementById('avatar').src = data.user_info.avatar;
+                            document.getElementById('nickname').textContent = data.user_info.nickname;
+                        }
+                        break;
+                    case "CONFIRMED":
+                        clearInterval(intervalId);
+                        console.log(`重定向到: ${redirectUri}?code=${data.code}&state=${stateParam}`);
+                        window.location.href = `${redirectUri}?code=${data.code}&state=${stateParam}`;
+                        break;
+                    case "EXPIRED":
+                        qrCodeArea.style.display = 'none';
+                        confirmArea.style.display = 'none';
+                        cancelledArea.style.display = 'none';
+                        expiredArea.style.display = 'block';
+                        clearInterval(intervalId);
+                        break;
+                    case "CANCELLED":
+                        qrCodeArea.style.display = 'none';
+                        confirmArea.style.display = 'none';
+                        expiredArea.style.display = 'none';
+                        cancelledArea.style.display = 'block';
+                        clearInterval(intervalId);
+                        break;
+                }
+            } catch (error) {
+                console.error('状态轮询错误:', error);
+                clearInterval(intervalId);
+            }
+        }, 2000); // 每2秒轮询一次
+    </script>
+</body>
+</html>
