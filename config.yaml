@@ -1,0 +1,8 @@
+
+
+redis:
+  url: ${REDIS_URL}
+
+db:
+  uri: ${DB_URI}
+  

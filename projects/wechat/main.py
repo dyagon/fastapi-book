@@ -1,5 +1,5 @@
 """微信模拟应用主入口"""
-import asyncio
+import pathlib
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -14,6 +14,7 @@ from .infra import config, logger
 from .app.middleware import LoggingMiddleware, CORSMiddleware
 from .app.exception_handlers import register_exception_handlers
 from .app.routers.login import router as login_router
+from .app.routers.oauth import router as oauth_router
 # from .app.routers import oauth, payment, user
 
 
@@ -39,17 +40,20 @@ app = FastAPI(
     redoc_url=None,
 )
 
+
+templates_dir = pathlib.Path(__file__).parent.parent / "templates"
+templates = Jinja2Templates(directory=str(templates_dir))
+
+
+# 注册异常处理器
+register_exception_handlers(app)
 # 添加中间件
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(CORSMiddleware)
 
-# 注册异常处理器
-register_exception_handlers(app)
+app.include_router(login_router)
+app.include_router(oauth_router)
 
-# 注册路由
-# app.include_router(oauth.router)
-# app.include_router(payment.router)
-# app.include_router(user.router)
 
 
 @app.get("/health")
@@ -59,6 +63,3 @@ async def health_check():
 
 
 register_custom_docs(app)
-
-app.include_router(login_router)
-

@@ -7,7 +7,7 @@ class WeChatConfig(BaseSettings):
     """微信应用配置"""
     
     # 应用基本信息
-    app_id: str = "wx1234567890abcdef"
+    app_id: str = "123"
     app_secret: str = "your_app_secret_here"
     app_name: str = "微信模拟应用"
     

@@ -1,0 +1,12 @@
+
+redis:
+  url: ${REDIS_URL}
+
+db:
+  uri: ${DB_URI}
+
+oauth:
+  base_url: http://localhost:8000/api
+  token_url: http://localhost:8000/oauth2/token
+  client_id: client-credentials-client
+  client_secret: client-credentials-secret-456

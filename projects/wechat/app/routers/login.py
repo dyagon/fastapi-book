@@ -200,7 +200,7 @@ async def simulate_cancel(
 
 @router.get("/callback")
 async def callback_page(request: Request, code: str, state: str):
-    """回调页面，显示登录结果"""
+    """回调页面，显示登录结果，以及后续授权流程"""
     return templates.TemplateResponse(
         "callback.html",
         {

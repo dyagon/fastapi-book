@@ -24,7 +24,6 @@ class WechatLoginService:
         """获取会话"""
         return await self.session_repo.get_session(session_id)
 
-
     async def mark_scanned(self, session_id: str, user_info: UserInfo) -> Optional[QRSession]:
         """标记会话为已扫描"""
         return await self.session_repo.mark_scanned(session_id, user_info)

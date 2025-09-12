@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <head>
-    <title>OAuth2 Client App</title>
+    <title>Backend Application</title>
     <style>
         body { font-family: sans-serif; margin: 40px; background-color: #f5f5f5; }
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -24,7 +24,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>OAuth2 Client Application</h1>
+        <h1>Backend Application</h1>
         
         <!-- Message area for dynamic messages -->
         <div id="message-area">
@@ -52,15 +52,35 @@
                 <div class="loading" id="loading">Loading...</div>
             </div>
             
+            <div class="actions">
+                <h3>Client Credentials Flow Test</h3>
+                <button onclick="testClientCredentials()" class="btn" id="client-credentials-btn">Test Client Credentials</button>
+                <div class="loading" id="client-credentials-loading">Loading...</div>
+            </div>
+            
             <div id="api-results" class="api-results hidden">
                 <h3>API Response:</h3>
                 <pre id="api-response"></pre>
             </div>
         {% else %}
-            <p>Welcome to the OAuth2 Client Application. Please login to access protected resources.</p>
+            <p>Welcome to the Backend Application. Please login to access protected resources.</p>
             
             <div class="actions">
+                <h3>OAuth2 Authorization Code Flow</h3>
                 <a href="/login" class="btn">Login with OAuth2</a>
+            </div>
+            
+            <div class="actions">
+                <h3>OAuth2 Client Credentials Flow</h3>
+                <p>Test the Client Credentials flow without user login:</p>
+                <button onclick="fetchToken()" class="btn" id="fetch-token-btn">Fetch Token</button>
+                <button onclick="getClientInfo()" class="btn" id="get-client-info-btn">Get Client Info</button>
+                <div class="loading" id="client-credentials-loading">Loading...</div>
+            </div>
+            
+            <div id="api-results" class="api-results hidden">
+                <h3>API Response:</h3>
+                <pre id="api-response"></pre>
             </div>
         {% endif %}
     </div>
@@ -108,20 +128,59 @@
             }
         }
 
+        function showClientCredentialsLoading(show = true) {
+            const loading = document.getElementById('client-credentials-loading');
+            const button = document.getElementById('client-credentials-btn');
+            
+            if (show) {
+                loading.style.display = 'inline';
+                if (button) button.disabled = true;
+            } else {
+                loading.style.display = 'none';
+                if (button) button.disabled = false;
+            }
+        }
+
+        function showClientCredentialsLoading(show = true) {
+            const loading = document.getElementById('client-credentials-loading');
+            const buttons = ['fetch-token-btn', 'get-client-info-btn'];
+            
+            if (show) {
+                loading.style.display = 'inline';
+                buttons.forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.disabled = true;
+                });
+            } else {
+                loading.style.display = 'none';
+                buttons.forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.disabled = false;
+                });
+            }
+        }
+
         function showApiResult(data) {
             const resultsDiv = document.getElementById('api-results');
             const responseElement = document.getElementById('api-response');
             
-            responseElement.textContent = JSON.stringify(data, null, 2);
-            resultsDiv.classList.remove('hidden');
-            
-            // Scroll to results
-            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+            if (resultsDiv && responseElement) {
+                responseElement.textContent = JSON.stringify(data, null, 2);
+                resultsDiv.classList.remove('hidden');
+                
+                // Scroll to results
+                resultsDiv.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                // 如果元素不存在，直接在消息区域显示结果
+                showMessage(`API Response: ${JSON.stringify(data, null, 2)}`, 'success');
+            }
         }
 
         function hideApiResult() {
             const resultsDiv = document.getElementById('api-results');
-            resultsDiv.classList.add('hidden');
+            if (resultsDiv) {
+                resultsDiv.classList.add('hidden');
+            }
         }
 
         // API call functions
@@ -172,6 +231,81 @@
                 showMessage(`Error: ${error.message}`, 'error');
             } finally {
                 showLoading(false);
+            }
+        }
+
+        async function testClientCredentials() {
+            try {
+                showClientCredentialsLoading(true);
+                hideApiResult();
+                
+                const response = await fetch('/test-client-credentials');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showApiResult(data);
+                    showMessage('Client Credentials flow test completed successfully!', 'success');
+                } else {
+                    throw new Error(data.detail || 'Failed to test client credentials flow');
+                }
+            } catch (error) {
+                console.error('Error testing client credentials:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                showClientCredentialsLoading(false);
+            }
+        }
+
+
+        async function fetchToken() {
+            try {
+                showClientCredentialsLoading(true);
+                hideApiResult();
+                
+                const response = await fetch('/fetch_token', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showApiResult(data);
+                    
+                } else {
+                    throw new Error(data.detail || data.error || 'Failed to fetch token');
+                }
+            } catch (error) {
+                console.error('Error fetching token:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                showClientCredentialsLoading(false);
+            }
+        }
+
+        async function getClientInfo() {
+            try {
+                showClientCredentialsLoading(true);
+                hideApiResult();
+                
+                const response = await fetch('/get_client_info', {
+                    method: 'GET',
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showApiResult(data);
+                } else {
+                    throw new Error(data.detail || data.error || 'Failed to get client info');
+                }
+            } catch (error) {
+                console.error('Error getting client info:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                showClientCredentialsLoading(false);
             }
         }
 

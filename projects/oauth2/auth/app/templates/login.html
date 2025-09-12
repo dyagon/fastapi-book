@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<head>
+    <title>授权访问</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .container { background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 420px; max-width: 90vw; }
+        h1 { text-align: center; color: #333; margin-bottom: 0.5rem; font-size: 1.8rem; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 2rem; font-size: 0.9rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 0.75rem; border: 2px solid #e1e5e9; border-radius: 6px; box-sizing: border-box; font-size: 1rem; transition: border-color 0.3s; }
+        input[type="text"]:focus, input[type="password"]:focus { outline: none; border-color: #007bff; }
+        .error { color: #dc3545; text-align: center; margin-bottom: 1rem; padding: 0.75rem; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; }
+        .consent-section { background-color: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #007bff; }
+        .consent-text { color: #495057; margin-bottom: 1rem; line-height: 1.5; }
+        .client-name { font-weight: bold; color: #007bff; }
+        .scope-list { background-color: white; padding: 1rem; border-radius: 6px; margin: 1rem 0; border: 1px solid #dee2e6; }
+        .scope-item { padding: 0.5rem 0; border-bottom: 1px solid #f1f3f4; display: flex; align-items: center; }
+        .scope-item:last-child { border-bottom: none; }
+        .scope-item input[type="checkbox"] { margin-right: 0.75rem; transform: scale(1.2); }
+        .scope-label { display: flex; align-items: center; cursor: pointer; flex: 1; }
+        .scope-icon { color: #28a745; margin-right: 0.5rem; }
+        .consent-options { display: flex; gap: 1rem; margin-top: 1.5rem; }
+        .consent-option { flex: 1; }
+        .btn { width: 100%; padding: 0.875rem; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: all 0.3s; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-primary:hover { background-color: #0056b3; transform: translateY(-1px); }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-secondary:hover { background-color: #545b62; transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>授权访问</h1>
+        <p class="subtitle">请登录并授权应用程序访问您的账户</p>
+        
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+        
+        <!-- 授权信息展示 -->
+        <div class="consent-section">
+            <div class="consent-text">
+                应用程序 <span class="client-name">{{ client_id }}</span> 正在请求访问您的账户。
+            </div>
+            
+            {% if scope %}
+            <div class="scope-list">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <strong>请求的权限：</strong>
+                    <div>
+                        <button type="button" onclick="toggleAllScopes(true)" style="margin-right: 0.5rem; padding: 0.25rem 0.5rem; font-size: 0.8rem; border: 1px solid #007bff; background: white; color: #007bff; border-radius: 3px; cursor: pointer;">全选</button>
+                        <button type="button" onclick="toggleAllScopes(false)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; border: 1px solid #6c757d; background: white; color: #6c757d; border-radius: 3px; cursor: pointer;">取消全选</button>
+                    </div>
+                </div>
+                {% for scope_item in scope.split() %}
+                <div class="scope-item">
+                    <input type="checkbox" id="scope_{{ loop.index }}" name="selected_scopes" value="{{ scope_item }}" checked>
+                    <label for="scope_{{ loop.index }}" class="scope-label">
+                        <span class="scope-icon">✓</span>
+                        <span>{{ scope_item }}</span>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <form method="post" id="authForm">
+            <!-- Hidden fields to maintain state -->
+            <input type="hidden" name="client_id" value="{{ client_id }}">
+            <input type="hidden" name="redirect_uri" value="{{ redirect_uri }}">
+            <input type="hidden" name="response_type" value="{{ response_type }}">
+            <input type="hidden" name="state" value="{{ state or '' }}">
+            <input type="hidden" name="scope" value="{{ scope or '' }}">
+            <!-- PKCE parameters -->
+            <input type="hidden" name="code_challenge" value="{{ code_challenge or '' }}">
+            <input type="hidden" name="code_challenge_method" value="{{ code_challenge_method or '' }}">
+            <!-- Consent field -->
+            <input type="hidden" name="consent" id="consent" value="false">
+            
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" required placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" required placeholder="请输入密码">
+            </div>
+            
+            <div class="consent-options">
+                <div class="consent-option">
+                    <button type="button" class="btn btn-secondary" onclick="denyAccess()">拒绝访问</button>
+                </div>
+                <div class="consent-option">
+                    <button type="button" class="btn btn-primary" onclick="grantAccess()">同意并登录</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <script>
+        function grantAccess() {
+            document.getElementById('consent').value = 'true';
+            
+            // 收集选中的权限
+            const selectedScopes = [];
+            const checkboxes = document.querySelectorAll('input[name="selected_scopes"]:checked');
+            checkboxes.forEach(checkbox => {
+                selectedScopes.push(checkbox.value);
+            });
+            
+            // 更新scope字段
+            document.querySelector('input[name="scope"]').value = selectedScopes.join(' ');
+            
+            // 打印提交信息
+            console.log('提交的授权信息:', {
+                username: document.getElementById('username').value,
+                consent: 'true',
+                selectedScopes: selectedScopes,
+                client_id: document.querySelector('input[name="client_id"]').value,
+                redirect_uri: document.querySelector('input[name="redirect_uri"]').value
+            });
+            
+            document.getElementById('authForm').submit();
+        }
+        
+        function denyAccess() {
+            document.getElementById('consent').value = 'false';
+            
+            // 打印拒绝信息
+            console.log('用户拒绝授权:', {
+                username: document.getElementById('username').value,
+                consent: 'false',
+                client_id: document.querySelector('input[name="client_id"]').value
+            });
+            
+            document.getElementById('authForm').submit();
+        }
+        
+        // 表单验证
+        document.getElementById('authForm').addEventListener('submit', function(e) {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            if (!username || !password) {
+                e.preventDefault();
+                alert('请输入用户名和密码');
+                return false;
+            }
+        });
+        
+        // 全选/取消全选功能
+        function toggleAllScopes(checked) {
+            const checkboxes = document.querySelectorAll('input[name="selected_scopes"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = checked;
+            });
+        }
+    </script>
+</body>
+</html>
