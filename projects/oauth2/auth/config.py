@@ -6,6 +6,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 users = {
     "alice": {
+        "id": "1",
         "username": "alice",
         "password": pwd_context.hash("123"),  # Hash the password
         "full_name": "Alice Wonderland",
@@ -13,6 +14,7 @@ users = {
         "disabled": False,
     },
     "bob": {
+        "id": "2",
         "username": "bob",
         "password": pwd_context.hash("123"),
         "full_name": "Bob Builder",

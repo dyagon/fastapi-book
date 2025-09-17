@@ -17,7 +17,7 @@ from ..depends import get_oauth2_service, OAuth2Service
 template_dir = pathlib.Path(__file__).parent.parent / "templates"
 templates = Jinja2Templates(directory=template_dir)
 
-router = APIRouter()
+router = APIRouter(tags=["OAuth2"])
 
 # HTTP Basic Authentication for client credentials
 security = HTTPBasic(auto_error=False)
@@ -38,6 +38,7 @@ async def get_token(
     code_verifier: Optional[str] = Form(None),
     refresh_token: Optional[str] = Form(None),
     basic_credentials: Optional[HTTPBasicCredentials] = Depends(security),
+    oauth2_service: OAuth2Service = Depends(get_oauth2_service),
 ):
     # 优先使用 HTTP Basic Auth，如果没有则使用 Form 参数
     if basic_credentials and basic_credentials.username:
@@ -63,8 +64,7 @@ async def get_token(
         code_verifier=code_verifier,
         refresh_token=refresh_token,
     )
-    oauth2_service = get_oauth2_service()
-    return oauth2_service.handle_token_request(token_request)
+    return await oauth2_service.handle_token_request(token_request)
 
 
 @router.get("/authorize")
@@ -74,7 +74,7 @@ async def authorize(
     oauth2_service: OAuth2Service = Depends(get_oauth2_service),
 ):
 
-    oauth2_service.validate_authorize_request(auth_request)
+    await oauth2_service.validate_authorize_request(auth_request)
 
     # Show login form
     return templates.TemplateResponse(
@@ -130,10 +130,10 @@ async def authorize(
         print("==================")
 
         # 验证授权请求
-        oauth2_service.validate_authorize_form_request(auth_request)
+        await oauth2_service.validate_authorize_form_request(auth_request)
 
         # 生成授权码并处理用户授权决定
-        redirect_url = oauth2_service.generate_authorization_code(auth_request)
+        redirect_url = await oauth2_service.generate_authorization_code(auth_request)
 
         print(f"重定向URL: {redirect_url}")
 

@@ -4,14 +4,10 @@ from typing import Optional, Dict, Any
 
 import httpx
 
-from ...config import config
 
 router = APIRouter()
 
-RESOURCE_SERVER_BASE_URL = config.RESOURCE_SERVER_BASE_URL
-
-
-
+# RESOURCE_SERVER_BASE_URL = config.RESOURCE_SERVER_BASE_URL
 
 
 

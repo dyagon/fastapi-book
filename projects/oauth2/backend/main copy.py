@@ -1,7 +1,7 @@
-from fastapi import FastAPI, HTTPException, Request, Depends, Query
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi import FastAPI, Request, Query
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer
 
 import os
 import httpx
@@ -10,7 +10,6 @@ import urllib.parse
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
-import base64
 
 # Client configuration
 CLIENT_ID = "auth-code-client"
@@ -54,53 +53,7 @@ def generate_state() -> str:
     """Generate a secure random state parameter."""
     return secrets.token_urlsafe(32)
 
-async def exchange_code_for_tokens(code: str) -> Optional[TokenResponse]:
-    """Exchange authorization code for access tokens."""
-    token_url = f"{AUTH_SERVER_BASE_URL}/oauth2/token"
-    
-    # Prepare token request
-    data = {
-        "grant_type": "authorization_code",
-        "code": code,
-        "redirect_uri": REDIRECT_URI,
-        "client_id": CLIENT_ID,
-    }
-    
-    headers = {
-        "Authorization": create_basic_auth_header(CLIENT_ID, CLIENT_SECRET),
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-    
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(token_url, data=data, headers=headers)
-            response.raise_for_status()
-            token_data = response.json()
-            return TokenResponse(**token_data)
-        except httpx.HTTPStatusError as e:
-            print(f"Token exchange failed: {e.response.status_code} - {e.response.text}")
-            return None
-        except Exception as e:
-            print(f"Token exchange error: {e}")
-            return None
 
-async def get_user_info_from_token(access_token: str) -> Optional[UserInfo]:
-    """Get user information using access token."""
-    user_url = f"{RESOURCE_SERVER_BASE_URL}/user/me"
-    
-    headers = {
-        "Authorization": f"Bearer {access_token}"
-    }
-    
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(user_url, headers=headers)
-            response.raise_for_status()
-            user_data = response.json()
-            return UserInfo(**user_data)
-        except Exception as e:
-            print(f"Failed to get user info: {e}")
-            return None
 
 def get_session_id(request: Request) -> str:
     """Get or create session ID from cookies."""
@@ -224,50 +177,3 @@ async def status(request: Request):
         "login_time": session_data.get("login_time"),
         "has_refresh_token": "refresh_token" in session_data
     }
-
-# Health check
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "service": "oauth2-client"}
-
-
-@app.get("/test-client-credentials")
-async def test_client_credentials(
-    client_id: str = Query("client-credentials-client"),
-    client_secret: str = Query("client-credentials-secret-456")
-):
-    """Test Client Credentials flow to get client info."""
-    token_url = f"{AUTH_SERVER_BASE_URL}/oauth2/token"
-    
-    data = {
-        "grant_type": "client_credentials",
-        "scope": "get_client_info"
-    }
-    headers = {
-        "Authorization": create_basic_auth_header(client_id, client_secret),
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-    
-    async with httpx.AsyncClient() as client:
-        try:
-            # Get access token using client credentials
-            response = await client.post(token_url, data=data, headers=headers)
-            response.raise_for_status()
-            token_data = response.json()
-            access_token = token_data["access_token"]
-            print(f"Obtained access token: {access_token}")
-            
-            # Call protected client info endpoint
-            client_info_url = f"{RESOURCE_SERVER_BASE_URL}/client"
-            headers = {
-                "Authorization": f"Bearer {access_token}"
-            }
-            response = await client.get(client_info_url, headers=headers)
-            response.raise_for_status()
-            return response.json()
-            
-        except httpx.HTTPStatusError as e:
-            raise HTTPException(status_code=400, detail=f"Client credentials flow failed: {e.response.text}")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Client credentials flow failed: {str(e)}")

@@ -5,7 +5,6 @@ from enum import StrEnum
 
 
 from .token import TokenRequest, TokenResponse
-from .user import User, UserInDB
 from .client import Client
 
 

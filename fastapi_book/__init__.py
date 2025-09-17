@@ -1,4 +1,4 @@
-import abc
+
 import asyncio
 import os
 import re
@@ -7,6 +7,12 @@ from pathlib import Path
 from typing import Any, Dict, Type, TypeVar
 
 from dotenv import load_dotenv
+
+
+from sqlalchemy.orm import DeclarativeBase
+
+class Base(DeclarativeBase):
+    pass
 
 
 def load_yaml_config(config_file, env_file=".env") -> dict[str, Any]:
@@ -88,4 +94,4 @@ class InfraRegistry:
         print("--- All infrastructure shutdown complete. ---")
 
 
-__all__ = ["load_yaml_config", "BaseInfra", "InfraRegistry"]
+__all__ = ["load_yaml_config", "BaseInfra", "InfraRegistry", "Base"]

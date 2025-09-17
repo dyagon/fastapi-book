@@ -8,3 +8,9 @@ class AuthorizationCodeResponse(BaseModel):
     scope: Optional[str] = None
 
 
+
+class UserInfoDto(BaseModel):
+    id: str
+    username: str
+    email: Optional[str]
+    full_name: Optional[str]
