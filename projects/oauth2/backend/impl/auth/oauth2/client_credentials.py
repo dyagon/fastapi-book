@@ -11,6 +11,7 @@ class OAuth2ClientCredentialsConfig(BaseModel):
     token_url: str
     client_id: str
     client_secret: str
+    scope: Optional[str] = None
 
 
 class OAuth2ClientCredentialsClient:
@@ -22,9 +23,7 @@ class OAuth2ClientCredentialsClient:
         self._token_url = config.token_url
         self._client_id = config.client_id
         self._client_secret = config.client_secret
-        self._access_token: Optional[str] = None
-        self._expires_at: float = 0.0
-        self._lock = asyncio.Lock()
+        self._scope = config.scope
 
     @property
     def _basic_auth_header(self) -> str:
@@ -32,18 +31,10 @@ class OAuth2ClientCredentialsClient:
         encoded_credentials = base64.b64encode(credentials.encode()).decode()
         return f"Basic {encoded_credentials}"
 
-    @property
-    def _is_expired(self) -> bool:
-        return time.time() > self._expires_at - 60  # add 60 seconds buffer
-
-    async def get_token(self) -> str:
-        async with self._lock:
-            if self._access_token is None or self._is_expired:
-                await self._fetch_new_token()
-        return self._access_token
-
-    async def _fetch_new_token(self):
-        data = {"grant_type": "client_credentials", "scope": "get_client_info"}
+    async def fetch_token(self) -> dict:
+        data = {"grant_type": "client_credentials"}
+        if self._scope:
+            data["scope"] = self._scope
         headers = {
             "Authorization": self._basic_auth_header,
             "Content-Type": "application/x-www-form-urlencoded",
@@ -54,9 +45,7 @@ class OAuth2ClientCredentialsClient:
                 self._token_url, data=data, headers=headers
             )
             response.raise_for_status()
-            token_data = response.json()
-            self._access_token = token_data["access_token"]
-            self._expires_at = time.time() + token_data["expires_in"]
+            return response.json()
         except httpx.HTTPStatusError as e:
             print(f"Failed to fetch new token: {e.response.text}")
             self._access_token = None

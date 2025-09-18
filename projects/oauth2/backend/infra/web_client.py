@@ -4,8 +4,6 @@ from fastapi_book import BaseInfra
 
 
 
-
-
 class WebClient(BaseInfra):
     def __init__(self):
         self._client: httpx.AsyncClient = None

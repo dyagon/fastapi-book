@@ -1,51 +1,59 @@
 from urllib.parse import urlencode, quote
+from dependency_injector.wiring import Provide, inject
 from fastapi.responses import RedirectResponse
 
 from fastapi import APIRouter, Depends, Query, Request
 
 from typing import Optional
 
+from ...context.app_container import (
+    Container,
+    ClientCredentialsClient,
+)
 from ...domain.services.auth_login import OAuthLoginService
 
-from ..depends import (
-    get_auth_login_service,
-    get_auth_service,
-    OAuth2ClientCredentialsService,
-)
 
 router = APIRouter()
 
 
 @router.get("/fetch_token")
+@inject
 async def fetch_token(
-    auth_service: OAuth2ClientCredentialsService = Depends(get_auth_service),
+    cc_client: ClientCredentialsClient = Depends(Provide[Container.cc_client]),
 ):
-    return await auth_service.get_token()
+    return await cc_client.get_token()
 
 
 @router.get("/get_client_info")
+@inject
 async def get_client_info(
-    auth_service: OAuth2ClientCredentialsService = Depends(get_auth_service),
+    cc_client: ClientCredentialsClient = Depends(Provide[Container.cc_client]),
 ):
-    return await auth_service.get_client_info()
+    return await cc_client.get_client_info()
 
 
 @router.get("/login")
+@inject
 async def login(
-    auth_login_service: OAuthLoginService = Depends(get_auth_login_service),
+    auth_login_service: OAuthLoginService = Depends(
+        Provide[Container.auth_login_service]
+    ),
 ):
     auth_url = await auth_login_service.login()
     return RedirectResponse(url=auth_url, status_code=302)
 
 
 @router.get("/callback")
+@inject
 async def callback(
     request: Request,
     code: Optional[str] = Query(None),
     state: Optional[str] = Query(None),
     error: Optional[str] = Query(None),
     error_description: Optional[str] = Query(None),
-    auth_login_service: OAuthLoginService = Depends(get_auth_login_service),
+    auth_login_service: OAuthLoginService = Depends(
+        Provide[Container.auth_login_service]
+    ),
 ):
     """Handle OAuth2 callback."""
     # session_id = request.cookies.get("session_id")

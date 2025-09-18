@@ -40,7 +40,7 @@ class SessionManager:
     async def get_session(self, session_id: str) -> Optional[Session]:
         if not await self.redis_client.exists(self.prefix + session_id):
             return None
-        
+
         session_data = await self.redis_client.hgetall(self.prefix + session_id)
         session = Session.model_validate(session_data)
 
@@ -72,7 +72,9 @@ class SessionManager:
         await self.redis_client.delete(self.prefix + session_id)
 
     ## state manage
-    async def new_state(self, expires_delta: timedelta = timedelta(minutes=5)) -> str:
+    async def set_state(
+        self, state: str, expires_delta: timedelta = timedelta(minutes=5)
+    ) -> str:
         state = token_urlsafe(32)
         await self.redis_client.set(self.prefix + state, state, expires_delta)
         return state

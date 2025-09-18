@@ -9,40 +9,62 @@ from datetime import datetime, timezone
 from ...impl.session_manager import SessionManager
 from .user_service import UserService
 
+from typing import Dict, Optional
+from urllib.parse import urlencode
+
+from pydantic import BaseModel
+from ...impl.auth import (
+    AuthorizationCodeClient,
+    AuthorizationCodeClientConfig,
+)
+
+from ...impl.session_manager import SessionManager
+from .user_service import UserService
+
+
+class OAuthLoginServiceConfig(AuthorizationCodeClientConfig):
+    provider: str
+
 
 class OAuthLoginService:
     # oauth2 auth code login flow
-
     def __init__(
         self,
-        # auth_code_client: AuthCodeClient,
+        cfg: OAuthLoginServiceConfig,
+        client: AuthorizationCodeClient,
         session_manager: SessionManager,
         user_service: UserService,
     ):
-        self.client = auth_code_client
+        self.cfg = cfg
+        self.client = client
         self.session_manager = session_manager
         self.user_service = user_service
 
     async def login(self, return_to: Optional[str] = None) -> str:
         """生成 OAuth2 授权 URL"""
-        state = await self.session_manager.new_state()
-        return self.client.make_auth_url(state)
+        uri, state = self.client.create_authorization_url()
+        await self.session_manager.set_state(state)
+        return uri
 
     async def callback(self, code: str, state: str) -> Dict[str, Any]:
         """处理 OAuth2 回调"""
+        print("callback")
         try:
             # 1. 验证 state 参数
             if not await self.session_manager.validate_state(state):
+                print("invalid state")
                 return {"success": False, "error": "Invalid or expired state parameter"}
 
             # 2. 使用授权码换取访问令牌
-            tokens = await self.client.exchange_code_for_tokens(code)
+            tokens = await self.client.get_token(code)
             if not tokens:
                 return {"success": False, "error": "Failed to exchange code for tokens"}
             print(tokens)
 
             # 3. 使用访问令牌获取用户信息
-            user_info = await self.client.get_user_info(tokens["access_token"])
+            user_info = await self.client.get_user_info(
+                tokens["access_token"]
+            )
             if not user_info:
                 return {"success": False, "error": "Failed to get user information"}
 
@@ -57,7 +79,7 @@ class OAuthLoginService:
             self._store_session_data(session_id, tokens, user)
 
             # 6. 获取重定向 URL 并清理 state
-            state_data = self._state_storage.get(state, {})
+            state_data = await self.session_manager.get_state(state)
             return_to = state_data.get("return_to", "/")
             self._cleanup_state(state)
 

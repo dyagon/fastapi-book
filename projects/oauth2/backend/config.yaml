@@ -4,18 +4,20 @@ redis:
 db:
   uri: ${DB_URI}
 
-cc_service:
-  base_url: http://localhost:8000/api
-  token_url: http://localhost:8000/oauth2/token
-  client_id: client-credentials-client
-  client_secret: client-credentials-secret-456
+oauth2:
+  client_credentials:
+    base_url: http://localhost:8000/api
+    token_url: http://localhost:8000/oauth2/token
+    client_id: client-credentials-client
+    client_secret: client-credentials-secret-456
+    scope: get_client_info
 
-auth_code_client:
-  provider: local-oauth
-  base_url: http://localhost:8000/api
-  token_url: http://localhost:8000/oauth2/token
-  auth_url: http://localhost:8000/oauth2/authorize
-  client_id: auth-code-client
-  client_secret: auth-code-secret-123
-  redirect_uri: http://localhost:8001/callback
-  scope: get_user_info get_admin_info
+  authorization_code:
+    provider: local-oauth # indicate which provider to use
+    base_url: http://localhost:8000/api
+    token_url: http://localhost:8000/oauth2/token
+    auth_url: http://localhost:8000/oauth2/authorize
+    client_id: auth-code-client
+    client_secret: auth-code-secret-123
+    redirect_uri: http://localhost:8001/callback
+    scope: get_user_info get_admin_info

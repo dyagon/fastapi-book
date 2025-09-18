@@ -8,7 +8,7 @@ import httpx
 
 
 class AuthClient:
-    def __init__(self, client: httpx.AsyncClient, auth_strategy: AuthStrategy):
+    def __init__(self, client: httpx.AsyncClient):
         self._client = client
         self._auth = auth_strategy
 

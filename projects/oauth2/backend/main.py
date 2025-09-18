@@ -1,25 +1,43 @@
+
+import os
+from telnetlib import theNULL
+import threading
+from typing import Optional, Dict, Any
+
+
 from fastapi import FastAPI, HTTPException, Request, Depends, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-import os
-from typing import Optional, Dict, Any
+
+# from .context import infra
 
 
-from .context import infra
+# # 全局资源本身是在这里创建和管理的
+# async def lifespan(app: FastAPI):
+#     print("🚀 App startup: Creating DB connection pool.")
+#     await infra.setup()
+#     app.state.infra = infra
+#     yield
+#     print("👋 App shutdown: Closing DB connection pool.")
+
+#     await infra.shutdown()
+#     print("    -> DB connection pool closed.")
 
 
-# 全局资源本身是在这里创建和管理的
+from .context.app_container import Container
+
+
 async def lifespan(app: FastAPI):
-    print("🚀 App startup: Creating DB connection pool.")
-    await infra.setup()
-    app.state.infra = infra
+    app_container = Container()
+    app_container.wire(modules=[".app.routers.auth"])
+    print(threading.current_thread().name)
+    app_container.init_resources()
+    print("🚀 App startup")
+    app.state.app_container = app_container
     yield
-    print("👋 App shutdown: Closing DB connection pool.")
-
-    await infra.shutdown()
-    print("    -> DB connection pool closed.")
+    print("👋 App shutdown")
 
 
 app = FastAPI(
