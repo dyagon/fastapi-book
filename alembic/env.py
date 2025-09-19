@@ -11,20 +11,27 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 # Add the project root to the Python path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root / "src"))
+# project_root = Path(__file__).parent.parent
+# sys.path.insert(0, str(project_root / "src"))
 
 # Import our database configuration and models
-from fastapi_book import Base, get_settings, metadata
+from fastapi_book import Base
 
 # Import models so they are registered with Base.metadata
-from projects.chatroom.impl.repo.models import User
-from projects.hospital.domain.models import Hospitalinfo, Doctorinfo, DoctorScheduling, DoctorSubscribeinfo
-from projects.wechat.domain.models import User, OAuthToken, PaymentOrder, PaymentNotify
+# from projects.chatroom.impl.repo.models import User
+# from projects.hospital.domain.models import (
+#     Hospitalinfo,
+#     Doctorinfo,
+#     DoctorScheduling,
+#     DoctorSubscribeinfo,
+# )
+
+# from projects.wechat.domain.models import User, OAuthToken, PaymentOrder, PaymentNotify
+from projects.oauth2.backend.impl.repo.user import UserPO, AuthenticationPO
 
 PREFIX = "sqlalchemy."
 SQLALCHEMY_URL = PREFIX + "url"
-ASYNC_DATABASE_URL = get_settings().ASYNC_DATABASE_URI
+ASYNC_DATABASE_URL = "postgresql+asyncpg://admin:admin123@localhost:25432/fastapi_book"
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -40,7 +47,7 @@ config.set_main_option(SQLALCHEMY_URL, ASYNC_DATABASE_URL)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = metadata
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

@@ -15,6 +15,7 @@ class Base(DeclarativeBase):
     pass
 
 
+
 def load_yaml_config(config_file, env_file=".env") -> dict[str, Any]:
     # load env first
     load_dotenv(env_file)

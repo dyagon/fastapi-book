@@ -6,6 +6,9 @@ from fastapi import APIRouter, Depends, Query, Request
 
 from typing import Optional
 
+
+from ...impl.auth import Token
+
 from ...context.app_container import (
     Container,
     ClientCredentialsClient,
@@ -13,10 +16,11 @@ from ...context.app_container import (
 from ...domain.services.auth_login import OAuthLoginService
 
 
+
 router = APIRouter()
 
 
-@router.get("/fetch_token")
+@router.get("/fetch_token", response_model=Token)
 @inject
 async def fetch_token(
     cc_client: ClientCredentialsClient = Depends(Provide[Container.cc_client]),
@@ -34,12 +38,9 @@ async def get_client_info(
 
 @router.get("/login")
 @inject
-async def login(
-    auth_login_service: OAuthLoginService = Depends(
-        Provide[Container.auth_login_service]
-    ),
-):
-    auth_url = await auth_login_service.login()
+async def login():
+    async with Container.auth_login_service() as auth_login_service:
+        auth_url = await auth_login_service.login()
     return RedirectResponse(url=auth_url, status_code=302)
 
 
@@ -51,9 +52,6 @@ async def callback(
     state: Optional[str] = Query(None),
     error: Optional[str] = Query(None),
     error_description: Optional[str] = Query(None),
-    auth_login_service: OAuthLoginService = Depends(
-        Provide[Container.auth_login_service]
-    ),
 ):
     """Handle OAuth2 callback."""
     # session_id = request.cookies.get("session_id")
@@ -77,5 +75,7 @@ async def callback(
             url="/?error=No authorization code received", status_code=302
         )
 
-    result = await auth_login_service.callback(code, state)
+    async with Container.auth_login_service() as auth_login_service:
+        result = await auth_login_service.callback(code, state)
+
     return RedirectResponse(url="/", status_code=302)

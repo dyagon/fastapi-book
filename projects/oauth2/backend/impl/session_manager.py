@@ -74,13 +74,8 @@ class SessionManager:
     ## state manage
     async def set_state(
         self, state: str, expires_delta: timedelta = timedelta(minutes=5)
-    ) -> str:
-        state = token_urlsafe(32)
+    ):
         await self.redis_client.set(self.prefix + state, state, expires_delta)
-        return state
-
-    async def validate_state(self, state: str) -> bool:
-        return await self.redis_client.get(self.prefix + state) is not None
 
     async def get_state(self, state: str) -> Optional[str]:
         return await self.redis_client.get(self.prefix + state)

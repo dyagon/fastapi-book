@@ -16,8 +16,8 @@ class UserPO(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     uuid = Column(String(36), unique=True, nullable=False, index=True)
-    nickname = Column(String(20))
-    avatar_url = Column(String(20))
+    username = Column(String(20))
+    avatar_url = Column(String(255))
 
     created_at = Column(DateTime, default=func.now())
 
@@ -27,7 +27,7 @@ class UserPO(Base):
         return {
             "id": self.id,
             "uuid": self.uuid,
-            "nickname": self.nickname,
+            "username": self.username,
             "avatar_url": self.avatar_url,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
@@ -51,24 +51,28 @@ class AuthenticationPO(Base):
 
 class UserRepo:
     def __init__(self, db: AsyncSession):
+        print(db)
+        if type(db) != AsyncSession:
+            print(type(db))
+            raise ValueError("db must be an AsyncSession")
         self.db = db
 
     async def get_user_by_uuid(self, uuid: str) -> User | None:
         result = await self.db.execute(select(UserPO).where(UserPO.uuid == uuid))
         return result.scalars().first()
 
-    async def create_user(self, nickname: str, avatar_url: str) -> User:
+    async def create_user(self, username: str, avatar_url: str) -> User:
         new_user = UserPO(
-            uuid=str(uuid.uuid4()), nickname=nickname, avatar_url=avatar_url
+            uuid=str(uuid.uuid4()), username=username, avatar_url=avatar_url
         )
         self.db.add(new_user)
         await self.db.commit()
         await self.db.refresh(new_user)
         return User.model_validate(new_user)
 
-    async def update_user(self, uuid: str, nickname: str, avatar_url: str):
+    async def update_user(self, uuid: str, username: str, avatar_url: str):
         stmt = update(UserPO).where(UserPO.uuid == uuid)
-        stmt = stmt.values(nickname=nickname, avatar_url=avatar_url)
+        stmt = stmt.values(username=username, avatar_url=avatar_url)
         await self.db.execute(stmt)
         await self.db.commit()
         return await self.get_user_by_uuid(uuid)
@@ -78,9 +82,7 @@ class UserRepo:
         await self.db.execute(stmt)
         await self.db.commit()
 
-    async def get_auth_by_provider_and_provider_id(
-        self, provider: str, provider_id: str
-    ) -> Authentication | None:
+    async def get_auth(self, provider: str, provider_id: str) -> Authentication | None:
         result = await self.db.execute(
             select(AuthenticationPO).where(
                 AuthenticationPO.provider == provider,
@@ -114,9 +116,7 @@ class UserRepo:
         stmt = stmt.values(credentials=credentials)
         await self.db.execute(stmt)
         await self.db.commit()
-        return await self.get_auth_by_provider_and_provider_id(
-            provider, provider_id
-        )
+        return await self.get_auth(provider, provider_id)
 
     async def delete_authentication(
         self, user_id: int, provider: str, provider_id: str

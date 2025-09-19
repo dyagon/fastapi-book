@@ -26,17 +26,18 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 #     print("    -> DB connection pool closed.")
 
 
-from .context.app_container import Container
+from .context.app_container import Container, infra
 
 
 async def lifespan(app: FastAPI):
+    print("🚀 App startup")
+    await infra.setup()
     app_container = Container()
     app_container.wire(modules=[".app.routers.auth"])
     print(threading.current_thread().name)
-    app_container.init_resources()
-    print("🚀 App startup")
     app.state.app_container = app_container
     yield
+    await infra.shutdown()
     print("👋 App shutdown")
 
 

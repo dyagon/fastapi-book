@@ -1,9 +1,5 @@
+class DomainException(Exception): ...
 
 
+class M2MTokenException(DomainException): ...
 
-class DomainException(Exception):
-    pass
-
-
-class M2MTokenException(DomainException):
-    pass

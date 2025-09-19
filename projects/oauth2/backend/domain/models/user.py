@@ -2,7 +2,8 @@ from pydantic import BaseModel
 
 
 class User(BaseModel):
-    nickname: str
+    uuid: str
+    username: str
     avatar_url: str
 
     model_config = {"from_attributes": True}
@@ -10,7 +11,7 @@ class User(BaseModel):
 
 
 class Authentication(BaseModel):
-    user_id: str
+    uuid: str
     provider: str
     provider_id: str
     credentials: dict

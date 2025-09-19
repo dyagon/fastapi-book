@@ -1,66 +1,61 @@
 from pathlib import Path
 from pydantic import BaseModel
 
-import httpx
-
-from fastapi_book import load_yaml_config
-
-from fastapi_book import InfraRegistry, load_yaml_config
+from httpx import AsyncClient
+from fastapi_book import InfraRegistry
 from fastapi_book.infra import DatabaseConfig, RedisConfig, DatabaseInfra, RedisInfra
 
-from ..infra.web_client import WebClient
-from ..impl.auth import (
-    OAuth2ClientCredentialsClient,
-    OAuth2ClientCredentialsAuth,
-    AuthClient,
-)
-from ..domain.services.auth_service import (
-    OAuth2ClientCredentialsService,
-    OAuth2ClientCredentialsServiceConfig,
-)
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 
-class AppSettings(BaseModel):
+class InfraSettings(BaseModel):
     db: DatabaseConfig
     redis: RedisConfig
-    cc_service: OAuth2ClientCredentialsServiceConfig
-    # auth_code: AuthorizationCodeClientConfig
 
 
 class AppInfra(InfraRegistry):
 
-    def __init__(self, config_file: str):
+    def __init__(self, settings: InfraSettings):
         super().__init__()
-        config_dict = load_yaml_config(config_file)
-        self.cfg = AppSettings(**config_dict)
+        self.cfg = settings
 
         self.db = DatabaseInfra(self.cfg.db)
         self.redis = RedisInfra(self.cfg.redis)
-        self.webclient = WebClient()
+        self.async_client: AsyncClient | None = None
 
         self.register("db", self.db)
         self.register("redis", self.redis)
-        self.register("webclient", self.webclient)
+
+    def get_redis(self) -> Redis:
+        return self.redis.get_redis()
+
+    def get_async_client(self) -> AsyncClient:
+        return self.async_client
+
+    def get_db_session_factory(self) -> async_sessionmaker[AsyncSession]:
+        return self.db.db_sessionmaker
 
     async def setup(self):
         await self.setup_all()
-        self.async_client = self.webclient.client
-        assert self.async_client is not None
+        self.async_client = AsyncClient()
 
         # client credentials
-        self.cc_client = OAuth2ClientCredentialsClient(
-            self.async_client, self.cfg.cc_service
-        )
-        self.cc_auth = OAuth2ClientCredentialsAuth(self.cc_client)
-        self.auth_client = AuthClient(self.async_client, self.cc_auth)
-        self.auth_service = OAuth2ClientCredentialsService(
-            self.cfg.cc_service.base_url, self.auth_client
-        )
+        # self.cc_client = OAuth2ClientCredentialsClient(
+        #     self.async_client, self.cfg.cc_service
+        # )
+        # self.cc_auth = OAuth2ClientCredentialsAuth(self.cc_client)
+        # self.auth_client = AuthClient(self.async_client, self.cc_auth)
+        # self.auth_service = OAuth2ClientCredentialsService(
+        #     self.cfg.cc_service.base_url, self.auth_client
+        # )
 
     async def shutdown(self):
         await self.shutdown_all()
+        if self.async_client:
+            await self.async_client.aclose()
 
 
-config_file = Path(__file__).parent.parent / "config.yaml"
+# config_file = Path(__file__).parent.parent / "config.yaml"
 
-infra = AppInfra(config_file)
+# infra = AppInfra(config_file)
