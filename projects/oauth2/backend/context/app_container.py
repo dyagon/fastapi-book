@@ -48,11 +48,10 @@ infra = AppInfra(app_settings)
 
 @asynccontextmanager
 async def get_user_login_service(
-    db_session_factory: async_sessionmaker[AsyncSession],
     ac_client: AuthorizationCodeClient,
     session_manager: SessionManager,
 ):
-    async with db_session_factory() as session:
+    async with infra.get_db_session() as session:
         user_repo = UserRepo(session)
         user_service = UserService(user_repo)
         yield OAuthLoginService(
@@ -92,7 +91,6 @@ class Container(containers.DeclarativeContainer):
 
     auth_login_service = providers.Factory(
         get_user_login_service,
-        db_session_factory=db_session_factory,
         ac_client=ac_client,
         session_manager=session_manager,
     )

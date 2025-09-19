@@ -3,6 +3,7 @@ redis:
 
 db:
   uri: ${DB_URI}
+  debug_echo: ${DB_DEBUG_ECHO:true}
 
 oauth2:
   client_credentials:

@@ -1,8 +1,9 @@
+import uuid
 from pydantic import BaseModel
 
 
 class User(BaseModel):
-    uuid: str
+    uuid: uuid.UUID
     username: str
     avatar_url: str
 
@@ -11,7 +12,7 @@ class User(BaseModel):
 
 
 class Authentication(BaseModel):
-    uuid: str
+    user_uuid: uuid.UUID
     provider: str
     provider_id: str
     credentials: dict

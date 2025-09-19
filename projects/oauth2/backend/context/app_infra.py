@@ -1,4 +1,6 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import AsyncGenerator, Callable
 from pydantic import BaseModel
 
 from httpx import AsyncClient
@@ -35,6 +37,21 @@ class AppInfra(InfraRegistry):
 
     def get_db_session_factory(self) -> async_sessionmaker[AsyncSession]:
         return self.db.db_sessionmaker
+    
+    @asynccontextmanager
+    async def get_db_session(self) -> Callable[[], AsyncGenerator[AsyncSession, None]]:
+        try:
+            session: AsyncSession = self.db.db_sessionmaker()
+            print(f"    -> (Factory) New ASYNC session created: {id(session)}")
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+            print(f"    <- (Factory) ASYNC Session closed: {id(session)}")
+
 
     async def setup(self):
         await self.setup_all()

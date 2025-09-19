@@ -23,4 +23,4 @@ class UserService:
                 user.uuid, provider, provider_id, kwargs
             )
             
-        return await self.get_user_by_uuid(auth.uuid)
+        return await self.user_repo.get_user_by_uuid(auth.user_uuid)
