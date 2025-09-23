@@ -1,20 +1,26 @@
+import os
+from pathlib import Path
+
 from urllib.parse import urlencode, quote
 from dependency_injector.wiring import Provide, inject
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from fastapi import APIRouter, Depends, Query, Request
 
 from typing import Optional
 
+from fastapi.templating import Jinja2Templates
+
 
 from ...impl.auth import Token
+from ...impl.session_manager import SessionManager
 
 from ...context.app_container import (
     Container,
     ClientCredentialsClient,
 )
 from ...domain.services.auth_login import OAuthLoginService
-
+from ...domain.services.user_service import UserService
 
 
 router = APIRouter()
@@ -76,6 +82,39 @@ async def callback(
         )
 
     async with Container.auth_login_service() as auth_login_service:
-        result = await auth_login_service.callback(code, state)
+        session = await auth_login_service.callback(code, state)
+        request.session.update(session.to_dict())
 
     return RedirectResponse(url="/", status_code=302)
+
+
+
+# Initialize templates
+template_dir = Path(__file__).parent.parent / "templates"
+templates = Jinja2Templates(directory=template_dir)
+
+@router.get("/", response_class=HTMLResponse)
+@inject
+async def home(request: Request, error: Optional[str] = Query(None), session_manager: SessionManager = Depends(Provide[Container.session_manager])):
+    """Home page."""
+    session_data = request.session
+    if session_data:
+        session = await session_manager.get_session(session_data.get("session_id"))
+        user_id = session.get("user_id")
+        async with Container.user_service() as user_service:
+            user, auths = await user_service.get_user_and_auth(user_id)
+            if user:
+                print(user)
+                print(auths)
+    else:
+        session = None
+        user = None
+
+    context = {
+        "request": request,
+        "user": session_data.get("user") if session_data else None,
+        "scopes": session_data.get("scopes", []) if session_data else [],
+        "error": error,
+    }
+
+    return templates.TemplateResponse("index.html", context)

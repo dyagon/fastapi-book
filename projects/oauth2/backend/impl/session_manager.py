@@ -13,6 +13,14 @@ class Session(BaseModel):
     created_at: datetime
     last_activity_at: datetime
 
+    def to_dict(self) -> dict:
+        return {
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "created_at": self.created_at.timestamp(),
+            "last_activity_at": self.last_activity_at.timestamp(),
+        }
+
 
 class SessionManager:
 
@@ -32,7 +40,7 @@ class SessionManager:
             last_activity_at=datetime.now(timezone.utc),
         )
         await self.redis_client.hset(
-            self.prefix + session_id, mapping=session.model_dump()
+            self.prefix + session_id, mapping=session.to_dict()
         )
         await self.redis_client.expire(self.prefix + session_id, self.ttl)
         return session

@@ -1,6 +1,5 @@
-import secrets
-from typing import Optional, Dict, Any
 
+from typing import Optional
 
 from .user_service import UserService
 
@@ -15,7 +14,7 @@ from ...impl.auth import (
     MismatchingStateError,
 )
 
-from ...impl.session_manager import SessionManager
+from ...impl.session_manager import Session, SessionManager
 
 
 class OAuthLoginServiceConfig(AuthorizationCodeClientConfig):
@@ -43,7 +42,7 @@ class OAuthLoginService:
         await self.session_manager.set_state(state)
         return uri
 
-    async def callback(self, code: str, state: str) -> Dict[str, Any]:
+    async def callback(self, code: str, state: str) -> Session:
         """处理 OAuth2 回调"""
         # 1. 验证 state 参数
         state_data = await self.session_manager.get_state(state)
@@ -61,19 +60,6 @@ class OAuthLoginService:
             user_info=user_info.model_dump(),
             token=token.model_dump(),
         )
-        print(user)
         # 5. 存储令牌和用户信息到会话
-        # session_id = secrets.token_urlsafe(32)
-        # await self.session_manager.set_session_data(session_id, token.model_dump(), user.model_dump())
-
-        # # 6. 获取重定向 URL 并清理 state
-        # state_data = await self.session_manager.get_state(state)
-        # return_to = state_data.get("return_to", "/")
-        # await self.session_manager.cleanup_state(state)
-
-        # return {
-        #     "success": True,
-        #     "redirect_url": "/",
-        #     "user": user_info,
-        #     "token": token.model_dump(),
-        # }
+        session = await self.session_manager.new_session(str(user.uuid))
+        return session

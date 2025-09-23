@@ -32,7 +32,12 @@ class OAuth2ServiceConfig(BaseModel):
     authorization_code: OAuthLoginServiceConfig
 
 
+class AppConfig(BaseModel):
+    secret_key: str
+
+
 class AppSettings(InfraSettings):
+    app: AppConfig
     db: DatabaseConfig
     redis: RedisConfig
     oauth2: OAuth2ServiceConfig
@@ -44,6 +49,13 @@ yaml_config_file = Path(__file__).parent.parent / "config.yaml"
 app_settings = AppSettings(**load_yaml_config(yaml_config_file))
 
 infra = AppInfra(app_settings)
+
+
+@asynccontextmanager
+async def get_user_service():
+    async with infra.get_db_session() as session:
+        user_repo = UserRepo(session)
+        yield UserService(user_repo)
 
 
 @asynccontextmanager
@@ -87,6 +99,10 @@ class Container(containers.DeclarativeContainer):
     session_manager = providers.Singleton(
         SessionManager,
         redis_client=redis_client,
+    )
+
+    user_service = providers.Factory(
+        get_user_service,
     )
 
     auth_login_service = providers.Factory(

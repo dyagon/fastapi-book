@@ -62,7 +62,7 @@ class UserRepo:
 
     async def create_user(self, username: str, avatar_url: str) -> User:
         new_user = UserPO(
-            uuid=str(uuid.uuid4()), username=username, avatar_url=avatar_url
+            uuid=uuid.uuid4(), username=username, avatar_url=avatar_url
         )
         self.db.add(new_user)
         await self.db.flush()
@@ -102,10 +102,9 @@ class UserRepo:
         return Authentication.model_validate(new_authentication)
 
     async def update_authentication(
-        self, user_id: int, provider: str, provider_id: str, credentials: dict
+        self, provider: str, provider_id: str, credentials: dict
     ) -> Authentication:
         stmt = update(AuthenticationPO).where(
-            AuthenticationPO.user_id == user_id,
             AuthenticationPO.provider == provider,
             AuthenticationPO.provider_id == provider_id,
         )
@@ -114,18 +113,17 @@ class UserRepo:
         return await self.get_auth(provider, provider_id)
 
     async def delete_authentication(
-        self, user_id: int, provider: str, provider_id: str
+        self, provider: str, provider_id: str
     ):
         stmt = delete(AuthenticationPO).where(
-            AuthenticationPO.user_id == user_id,
             AuthenticationPO.provider == provider,
             AuthenticationPO.provider_id == provider_id,
         )
         await self.db.execute(stmt)
         await self.db.commit()
 
-    async def get_user_authentications(self, user_id: int) -> list[Authentication]:
+    async def get_user_authentications(self, user_uuid: uuid.UUID) -> list[Authentication]:
         result = await self.db.execute(
-            select(AuthenticationPO).where(AuthenticationPO.user_id == user_id)
+            select(AuthenticationPO).where(AuthenticationPO.user_uuid == user_uuid)
         )
         return result.scalars().all()

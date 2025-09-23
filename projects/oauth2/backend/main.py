@@ -1,4 +1,3 @@
-
 import os
 from telnetlib import theNULL
 import threading
@@ -10,6 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+from starlette.middleware.sessions import SessionMiddleware
 
 # from .context import infra
 
@@ -26,7 +26,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 #     print("    -> DB connection pool closed.")
 
 
-from .context.app_container import Container, infra
+from .context.app_container import Container, infra, app_settings
 
 
 async def lifespan(app: FastAPI):
@@ -48,40 +48,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(SessionMiddleware, secret_key=app_settings.app.secret_key)
+
 from .app.routers.auth import router as auth_router
 from .app.routers.api import router as api_router
-
-# In-memory session storage (in production, use Redis or database)
-sessions: Dict[str, Dict[str, Any]] = {}
-
-
-def get_current_session(request: Request) -> Optional[Dict[str, Any]]:
-    """Get current session data."""
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        return None
-    return sessions.get(session_id)
-
-
-# Initialize templates
-template_dir = os.path.join(os.path.dirname(__file__), "templates")
-templates = Jinja2Templates(directory=template_dir)
-
-
-# Routes
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request, error: Optional[str] = Query(None)):
-    """Home page."""
-    session_data = get_current_session(request)
-
-    context = {
-        "request": request,
-        "user": session_data.get("user") if session_data else None,
-        "scopes": session_data.get("scopes", []) if session_data else [],
-        "error": error,
-    }
-
-    return templates.TemplateResponse("index.html", context)
 
 
 app.include_router(auth_router)
