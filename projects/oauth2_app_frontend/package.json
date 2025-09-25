@@ -1,0 +1,27 @@
+{
+  "name": "pkce-oauth2-spa",
+  "version": "1.0.0",
+  "description": "Vue 3 SPA demonstrating PKCE OAuth2 flow",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "build": "echo 'No build process needed for this demo'",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "keywords": [
+    "oauth2",
+    "pkce",
+    "vue3",
+    "spa"
+  ],
+  "author": "FastAPI Book",
+  "license": "MIT"
+}

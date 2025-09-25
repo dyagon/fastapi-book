@@ -1,0 +1,8 @@
+{
+  "scope": "get_user_info get_admin_info",
+  "expires_at": 1758700983,
+  "expires_in": 900,
+  "token_type": "bearer",
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwic2NvcGUiOiJnZXRfdXNlcl9pbmZvIGdldF9hZG1pbl9pbmZvIiwiY2xpZW50X2lkIjoiYXV0aC1jb2RlLWNsaWVudCIsImV4cCI6MTc1ODcwMDk4M30.yxk0a_G2S4Q7jZSizOoCiVgLnATbbUfgknZhMW7wVxU",
+  "refresh_token": "Hsz-2TVwicV3B-0ruIIBbm0XMWqFHrHm13f0zwpXdFE"
+}
