@@ -8,11 +8,9 @@ from jose import jwt, JWTError
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 from ..dto import UserInfoDto
-from ..depends import get_token_manager, TokenManager, get_oauth2_service, OAuth2Service
-
+from ...context import AppContainer
 
 router = APIRouter(tags=["Resource"])
-
 
 class OAuth2ClientCredentialsBearer(OAuth2):
     def __init__(
@@ -56,9 +54,9 @@ oauth2_scheme = OAuth2ClientCredentialsBearer(tokenUrl="/oauth2/token")
 @router.get("/client")
 async def get_client_info(
     token: str = Depends(oauth2_scheme),
-    token_manager: TokenManager = Depends(get_token_manager),
 ):
-    return token_manager.jwt_token_decode(token)
+    token_service = AppContainer.token_service()
+    return token_service.jwt_token_decode(token)
 
 
 oauth2_auth_code_scheme = OAuth2AuthorizationCodeBearer(
@@ -68,11 +66,10 @@ oauth2_auth_code_scheme = OAuth2AuthorizationCodeBearer(
 
 @router.get("/user/info", response_model=UserInfoDto)
 async def get_user_info(
-    token: str = Depends(oauth2_auth_code_scheme),
-    token_manager: TokenManager = Depends(get_token_manager),
-    oauth2_service: OAuth2Service = Depends(get_oauth2_service),
+    token: str = Depends(oauth2_auth_code_scheme)
 ):
-    payload = token_manager.jwt_token_decode(token)
+    token_service = AppContainer.token_service()
+    payload = token_service.jwt_token_decode(token)
     print(payload)
     scopes = payload.get("scope", "")
     if "get_user_info" not in scopes:
@@ -86,7 +83,8 @@ async def get_user_info(
     if user_id and user_id != client_id:
         # 通过用户ID获取用户信息
         try:
-            user = await oauth2_service.user_repo.get_user_by_id(user_id)
+            user_repo = AppContainer.user_repo()
+            user = await user_repo.get_user_by_id(user_id)
             # 返回用户信息，排除密码
             return {
                 "id": user.id,

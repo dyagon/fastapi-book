@@ -1,16 +1,16 @@
 from datetime import timedelta, datetime, timezone
+from pydantic import BaseModel, ValidationError
+
 from urllib.parse import urlencode
 
-from pydantic import BaseModel
+from .oauth2_service import OAuth2Service
+from .token_service import TokenService
+from ...impl.repo import ClientRepo, UserRepo
+from ..models.token import TokenRequest, TokenResponse, AuthorizationCode
+from ..models.auth import AuthorizeRequestQuery, AuthorizeRequestForm
+from ..models.user import UserInDB
+from ..exception import InvalidRequestException, UnauthorizedClientException
 
-from .models.user import UserInDB
-from ..impl.token_manager import TokenManager
-
-from .models import Client, TokenRequest, TokenResponse
-from .models.token import AuthorizationCode, ClientCredentials, TokenIssuer
-from .models.auth import AuthorizeRequestQuery, AuthorizeRequestForm
-from ..impl.repo import ClientRepo, UserRepo
-from .exception import UnauthorizedClientException, InvalidGrantException
 
 
 class AuthCodeData(BaseModel):
@@ -22,57 +22,25 @@ class AuthCodeData(BaseModel):
     code_challenge_method: str
 
 
-class OAuth2Service:
+class AuthorizationCodeFlowService(OAuth2Service):
 
     def __init__(
-        self, client_repo: ClientRepo, user_repo: UserRepo, token_manager: TokenManager
+        self, client_repo: ClientRepo, user_repo: UserRepo, token_service: TokenService
     ):
-        self.client_repo = client_repo
+        super().__init__(client_repo, token_service)
         self.user_repo = user_repo
-        self.token_manager = token_manager
-
-    async def get_client(self, client_id: str) -> Client:
-        client = await self.client_repo.get_client(client_id)
-        if not client:
-            raise UnauthorizedClientException(f"Client {client_id} not found")
-        return client
 
     async def handle_token_request(self, token_request: TokenRequest) -> TokenResponse:
-        if token_request.grant_type == "client_credentials":
-            client_credentials = ClientCredentials.model_validate(token_request)
-            return await self.handle_client_credentials(client_credentials)
-        elif token_request.grant_type == "authorization_code":
+        # 1. check paramters
+        try:
             authorization_code = AuthorizationCode.model_validate(token_request)
-            return await self.handle_authorization_code(authorization_code)
-        elif token_request.grant_type == "refresh_token":
-            refresh_token = RefreshToken.model_validate(token_request)
-            return await self.handle_refresh_token(refresh_token)
-        else:
-            raise UnauthorizedClientException(
-                f"Unsupported grant type: {token_request.grant_type}"
-            )
+        except ValidationError as e:
+            raise InvalidRequestException()
 
-    async def handle_client_credentials(
-        self, client_credentials: ClientCredentials
-    ) -> TokenResponse:
-        client = await self.get_client(client_credentials.client_id)
-        client_credentials.validate_client(client)
-        token_data = client_credentials.token_data()
-        access_token = self.token_manager.jwt_token(token_data, timedelta(minutes=15))
-        return TokenResponse(
-            access_token=access_token,
-            token_type="bearer",
-            expires_in=15 * 60,
-            scope=client_credentials.scope,
-        )
-
-    async def handle_authorization_code(
-        self, authorization_code: AuthorizationCode
-    ) -> TokenResponse:
         client = await self.get_client(authorization_code.client_id)
         authorization_code.validate_client(client)
 
-        data = await self.token_manager.get_code(authorization_code.code)
+        data = await self.token_service.get_code(authorization_code.code)
         if not data:
             raise UnauthorizedClientException(
                 f"Invalid code: {authorization_code.code}"
@@ -88,14 +56,14 @@ class OAuth2Service:
             "client_id": auth_code_data.client_id,
         }
 
-        access_token = self.token_manager.jwt_token(token_data, timedelta(minutes=15))
+        access_token = self.token_service.jwt_token(token_data, timedelta(minutes=15))
         refresh_token_data = {
             "user_id": user_id,
             "client_id": auth_code_data.client_id,
             "scope": auth_code_data.scope,
             "issue_at": datetime.now(timezone.utc).isoformat(),
         }
-        refresh_token = await self.token_manager.opaque_token(
+        refresh_token = await self.token_service.opaque_token(
             refresh_token_data, timedelta(days=7)
         )
         return TokenResponse(
@@ -107,7 +75,6 @@ class OAuth2Service:
         )
 
     async def validate_authorize_request(self, auth_request: AuthorizeRequestQuery):
-        """验证授权请求，支持AuthorizeRequestQuery和AuthorizeFormRequest"""
 
         client = await self.get_client(auth_request.client_id)
 
@@ -186,7 +153,7 @@ class OAuth2Service:
             code_challenge_method=auth_request.code_challenge_method,
         )
         data = auth_code_data.model_dump()
-        auth_code = await self.token_manager.generate_code(data, timedelta(minutes=5))
+        auth_code = await self.token_service.generate_code(data, timedelta(minutes=5))
 
         # 构建成功重定向URL
         success_params = {"code": auth_code}

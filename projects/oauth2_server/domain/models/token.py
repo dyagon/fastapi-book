@@ -11,6 +11,7 @@ class TokenRequest(BaseModel):
     scope: Optional[str] = None
     redirect_uri: Optional[str] = None
     code: Optional[str] = None
+    refresh_token: Optional[str] = None
     code_verifier: Optional[str] = None
 
 class TokenResponse(BaseModel):
@@ -36,6 +37,9 @@ class ClientCredentials(TokenIssuer):
     client_secret: str
 
     def validate_client(self, client: Client):
+        if client is None:
+            raise UnauthorizedClientException(f"Client {self.client_id} not found")
+            
         if client.is_public_client():
             raise UnauthorizedClientException(f"Client {self.client_id} is a public client")
 
@@ -55,6 +59,19 @@ class ClientCredentials(TokenIssuer):
 class AuthorizationCode(TokenIssuer):
     code: str
     redirect_uri: str
+
+    def validate_client(self, client: Client):
+        if client.is_public_client():
+            raise UnauthorizedClientException(f"Client {self.client_id} is a public client")
+
+    def token_data(self) -> dict:
+        return {
+            "sub": self.client_id,
+            "scope": self.scope
+        }
+
+class RefreshToken(TokenIssuer):
+    refresh_token: str
 
     def validate_client(self, client: Client):
         if client.is_public_client():

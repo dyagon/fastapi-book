@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import (
     AsyncEngine,
 )
 
+
 class DatabaseConfig(BaseModel):
     uri: str
     debug_echo: bool = False
@@ -33,7 +34,7 @@ class DatabaseInfra(BaseInfra):
             max_overflow=self._db_cfg.max_overflow,
         )
         self._db_sessionmaker = async_sessionmaker(
-            self._db_engine, expire_on_commit=False
+            self._db_engine, expire_on_commit=False, autoflush=False
         )
         print("Database engine and session factory created.")
 
@@ -50,3 +51,5 @@ class DatabaseInfra(BaseInfra):
         if not self._db_sessionmaker:
             raise Exception("DB sessionmaker not initialized. Call init_db() first.")
         return self._db_sessionmaker
+
+

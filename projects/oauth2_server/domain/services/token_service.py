@@ -5,18 +5,30 @@ from datetime import datetime, timedelta, timezone
 
 from redis.asyncio import Redis
 from jose import jwt, JWTError
-from ..domain.exception import UnauthorizedClientException
+
+from ..exception import UnauthorizedClientException
 
 
-SECRET_KEY = "0a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
-ALGORITHM = "HS256"
-
-
-class TokenManager:
-    def __init__(self, redis_client: Redis):
+class TokenService:
+    def __init__(self, redis_client: Redis, secret_key: str, algorithm: str):
         self.redis_client = redis_client
         self.prefix = "oauth2:token:"
         self.code_prefix = "oauth2:code:"
+        self.secret_key = secret_key
+        self.algorithm = algorithm
+
+    def jwt_token(self, data: dict, expires_delta: timedelta) -> str:
+        to_encode = data.copy()
+        expire = datetime.now(timezone.utc) + expires_delta
+        to_encode.update({"exp": expire})
+        return jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
+
+    def jwt_token_decode(self, token: str) -> dict:
+        try:
+            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            return payload
+        except JWTError:
+            raise UnauthorizedClientException("Invalid token")
 
     async def _set(self, prefix: str, key: str, value: dict, expires_delta: timedelta):
         value = json.dumps(value)
@@ -30,21 +42,6 @@ class TokenManager:
 
     async def _delete(self, prefix: str, key: str):
         await self.redis_client.delete(prefix + key)
-
-    
-    def jwt_token(self, data: dict, expires_delta: timedelta) -> str:
-        to_encode = data.copy()
-        expire = datetime.now(timezone.utc) + expires_delta
-        to_encode.update({"exp": expire})
-        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-        return encoded_jwt
-
-    def jwt_token_decode(self, token: str) -> dict:
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            return payload
-        except JWTError:
-            raise UnauthorizedClientException("Invalid token")
 
     async def generate_code(self, data: dict, expires_delta: timedelta) -> str:
         code = str(uuid.uuid4())

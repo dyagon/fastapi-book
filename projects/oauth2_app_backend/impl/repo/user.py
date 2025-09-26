@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from fastapi_book import Base
 
 from ...domain.models.user import User, Authentication
+from ...infra import Repository
 
 
 class UserPO(Base):
@@ -56,40 +57,38 @@ class AuthenticationPO(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
-class UserRepo:
-    def __init__(self, db: AsyncSession):
-        self.db = db
+class UserRepo(Repository):
 
     async def get_user_by_uuid(self, uuid: uuid.UUID) -> User | None:
-        result = await self.db.execute(select(UserPO).where(UserPO.uuid == uuid))
+        result = await self.session.execute(select(UserPO).where(UserPO.uuid == uuid))
         return User.model_validate(result.scalars().first())
 
     async def create_user(self, username: str, avatar_url: str) -> User:
         new_user = UserPO(uuid=uuid.uuid4(), username=username, avatar_url=avatar_url)
-        self.db.add(new_user)
-        await self.db.flush()
+        self.session.add(new_user)
+        await self.session.flush()
         return User.model_validate(new_user)
 
     async def update_user(self, uuid: uuid.UUID, username: str, avatar_url: str):
         stmt = update(UserPO).where(UserPO.uuid == uuid)
         stmt = stmt.values(username=username, avatar_url=avatar_url)
-        await self.db.execute(stmt)
+        await self.session.execute(stmt)
         return await self.get_user_by_uuid(uuid)
 
     async def delete_user(self, uuid: uuid.UUID):
         stmt = delete(UserPO).where(UserPO.uuid == uuid)
-        await self.db.execute(stmt)
+        await self.session.execute(stmt)
 
     async def get_user_authentications(
         self, user_uuid: uuid.UUID
     ) -> list[Authentication]:
-        result = await self.db.execute(
+        result = await self.session.execute(
             select(AuthenticationPO).where(AuthenticationPO.user_uuid == user_uuid)
         )
         return [Authentication.model_validate(auth) for auth in result.scalars().all()]
 
     async def get_auth(self, provider: str, provider_id: str) -> Authentication | None:
-        result = await self.db.execute(
+        result = await self.session.execute(
             select(AuthenticationPO).where(
                 AuthenticationPO.provider == provider,
                 AuthenticationPO.provider_id == provider_id,
@@ -100,7 +99,7 @@ class UserRepo:
     async def get_auth_by_provider(
         self, provider: str, uuid: uuid.UUID
     ) -> Authentication | None:
-        result = await self.db.execute(
+        result = await self.session.execute(
             select(AuthenticationPO).where(
                 AuthenticationPO.provider == provider,
                 AuthenticationPO.user_uuid == uuid,
@@ -111,7 +110,7 @@ class UserRepo:
     async def get_auth_by_provider_for_update(
         self, provider: str, uuid: uuid.UUID
     ) -> Authentication | None:
-        result = await self.db.execute(
+        result = await self.session.execute(
             select(AuthenticationPO)
             .where(
                 AuthenticationPO.provider == provider,
@@ -161,8 +160,8 @@ class UserRepo:
             credential=credential,
             user_info=user_info,
         )
-        self.db.add(new_authentication)
-        await self.db.flush()
+        self.session.add(new_authentication)
+        await self.session.flush()
         print(new_authentication)
         return Authentication.model_validate(new_authentication)
 
@@ -174,7 +173,7 @@ class UserRepo:
             AuthenticationPO.provider_id == provider_id,
         )
         stmt = stmt.values(credential=credential)
-        await self.db.execute(stmt)
+        await self.session.execute(stmt)
         return await self.get_auth(provider, provider_id)
 
     async def delete_authentication(self, provider: str, provider_id: str):
@@ -182,5 +181,4 @@ class UserRepo:
             AuthenticationPO.provider == provider,
             AuthenticationPO.provider_id == provider_id,
         )
-        await self.db.execute(stmt)
-        await self.db.commit()
+        await self.session.execute(stmt)

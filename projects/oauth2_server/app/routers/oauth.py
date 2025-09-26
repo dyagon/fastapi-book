@@ -11,7 +11,7 @@ from ...domain.models import TokenRequest, TokenResponse
 from ...domain.exception import InvalidRequestException
 from ...domain.models.auth import AuthorizeRequestForm, AuthorizeRequestQuery
 
-from ..depends import get_oauth2_service, OAuth2Service
+from ...context import AppContainer
 
 
 template_dir = pathlib.Path(__file__).parent.parent / "templates"
@@ -37,8 +37,7 @@ async def get_token(
     code: Optional[str] = Form(None),
     code_verifier: Optional[str] = Form(None),
     refresh_token: Optional[str] = Form(None),
-    basic_credentials: Optional[HTTPBasicCredentials] = Depends(security),
-    oauth2_service: OAuth2Service = Depends(get_oauth2_service),
+    basic_credentials: Optional[HTTPBasicCredentials] = Depends(security)
 ):
     # 优先使用 HTTP Basic Auth，如果没有则使用 Form 参数
     if basic_credentials and basic_credentials.username:
@@ -64,15 +63,25 @@ async def get_token(
         code_verifier=code_verifier,
         refresh_token=refresh_token,
     )
+    print(token_request)
+    if grant_type == "client_credentials":
+        oauth2_service = AppContainer.client_credentials_flow_service()
+    elif grant_type == "authorization_code":
+        oauth2_service = AppContainer.authorization_code_flow_service()
+    elif grant_type == "refresh_token":
+        oauth2_service = AppContainer.refresh_token_flow_service()
     return await oauth2_service.handle_token_request(token_request)
 
 
 @router.get("/authorize")
 async def authorize(
     request: Request,
-    auth_request: AuthorizeRequestQuery = Depends(),
-    oauth2_service: OAuth2Service = Depends(get_oauth2_service),
+    auth_request: AuthorizeRequestQuery = Depends()
 ):
+    if auth_request.response_type == "code":
+        oauth2_service = AppContainer.authorization_code_flow_service()
+    else:
+        raise InvalidRequestException(f"Unsupported response type: {auth_request.response_type}")
 
     await oauth2_service.validate_authorize_request(auth_request)
 
@@ -102,8 +111,7 @@ async def authorize(
     state: Optional[str] = Form(None),
     scope: Optional[str] = Form(None),
     code_challenge: Optional[str] = Form(None),
-    code_challenge_method: Optional[str] = Form(None),
-    oauth2_service: OAuth2Service = Depends(get_oauth2_service),
+    code_challenge_method: Optional[str] = Form(None)
 ):
     try:
         auth_request = AuthorizeRequestForm(
@@ -130,6 +138,7 @@ async def authorize(
         print("==================")
 
         # 验证授权请求
+        oauth2_service = AppContainer.authorization_code_flow_service()
         await oauth2_service.validate_authorize_form_request(auth_request)
 
         # 生成授权码并处理用户授权决定

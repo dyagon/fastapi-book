@@ -11,7 +11,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from starlette.middleware.sessions import SessionMiddleware
 
-# from .context import infra
+from .infra import infra
 
 
 # # 全局资源本身是在这里创建和管理的
@@ -26,19 +26,18 @@ from starlette.middleware.sessions import SessionMiddleware
 #     print("    -> DB connection pool closed.")
 
 
-from .context.app_container import Container, infra, app_settings
+from .context.app_container import Container, app_settings
 from .domain.exceptions import SessionException
 
 
 async def lifespan(app: FastAPI):
     print("🚀 App startup")
-    await infra.setup()
     app_container = Container()
     app_container.wire(modules=[".app.routers.auth"])
     print(threading.current_thread().name)
     app.state.app_container = app_container
     yield
-    await infra.shutdown()
+    await infra.dispose()
     print("👋 App shutdown")
 
 

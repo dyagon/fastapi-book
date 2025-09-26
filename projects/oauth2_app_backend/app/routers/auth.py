@@ -18,36 +18,32 @@ from ...context.app_container import (
 
 from ..service import get_user_and_auths
 
+from ...domain.services.auth_login import OAuthLoginService
+
 
 router = APIRouter()
 
 
 @router.get("/fetch_token", response_model=Token)
-@inject
-async def fetch_token(
-    cc_client: ClientCredentialsClient = Depends(Provide[Container.cc_client]),
-):
+async def fetch_token():
+    cc_client = Container.cc_client()
     return await cc_client.get_token()
 
 
 @router.get("/get_client_info")
-@inject
-async def get_client_info(
-    cc_client: ClientCredentialsClient = Depends(Provide[Container.cc_client]),
-):
+async def get_client_info():
+    cc_client = Container.cc_client()
     return await cc_client.get_client_info()
 
 
 @router.get("/login")
-@inject
 async def login():
-    async with Container.auth_login_service() as auth_login_service:
-        auth_url = await auth_login_service.login()
+    auth_login_service = Container.auth_login_service()
+    auth_url = await auth_login_service.login()
     return RedirectResponse(url=auth_url, status_code=302)
 
 
 @router.get("/callback")
-@inject
 async def callback(
     request: Request,
     code: Optional[str] = Query(None),
@@ -65,15 +61,14 @@ async def callback(
             url="/?error=No authorization code received", status_code=302
         )
 
-    async with Container.auth_login_service() as auth_login_service:
-        session = await auth_login_service.callback(code, state)
-        request.session.update(session.to_dict())
+    auth_login_service = Container.auth_login_service()
+    session = await auth_login_service.callback(code, state)
+    request.session.update(session.to_dict())
 
     return RedirectResponse(url="/", status_code=302)
 
 
 @router.get("/logout")
-@inject
 async def logout(request: Request):
     session_data = request.session
     if not session_data or not session_data.get("session_id"):
@@ -85,12 +80,7 @@ async def logout(request: Request):
 
 
 @router.get("/", response_class=HTMLResponse)
-@inject
-async def home(
-    request: Request,
-    error: Optional[str] = Query(None),
-    session_manager: SessionManager = Depends(Provide[Container.session_manager]),
-):
+async def home(request: Request, error: Optional[str] = Query(None)):
     """Home page."""
     session_data = request.session
     user, auths = await get_user_and_auths(session_data)

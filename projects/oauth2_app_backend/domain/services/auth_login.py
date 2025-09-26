@@ -16,7 +16,7 @@ from ...impl.auth import (
 )
 
 from ...impl.session_manager import Session, SessionManager
-
+from ...infra import transactional_session
 
 class OAuthLoginServiceConfig(AuthorizationCodeClientConfig):
     provider: str
@@ -63,6 +63,7 @@ class OAuthLoginService:
         # 5. 存储令牌和用户信息到会话
         return await self.session_manager.new_session(str(user.uuid))
 
+    @transactional_session
     async def get_oauth_info(self, session: Session) -> LocalOAuthInfo:
         user, auth = await self.user_service.get_user_and_auth_for_update(
             session.user_id, self.auth_provider
@@ -71,6 +72,7 @@ class OAuthLoginService:
             return None
 
         token = Token.model_validate(auth.credential)
+        print(token)
         if token.is_expired():
             token = await self.client.refresh_token(token.refresh_token)
             auth.credential = token.model_dump()

@@ -20,8 +20,8 @@ async def api_user_info(request: Request):
     print(session)
     if not session:
         raise NotAuthenticatedException()
-    async with Container.auth_login_service() as auth_login_service:
-        auth_info = await auth_login_service.get_oauth_info(session)
+    auth_login_service = Container.auth_login_service()
+    auth_info = await auth_login_service.get_oauth_info(session)
     # if not auth_info:
     #     raise NotAuthenticatedException()
     # ac_client = Container.ac_client()
