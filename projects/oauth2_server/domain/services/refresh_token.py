@@ -25,11 +25,5 @@ class RefreshTokenFlowService(OAuth2Service):
         rt.validate_client(client)
 
         # 3. generate token
-        token_data = rt.token_data()
-        access_token = self.token_service.jwt_token(token_data, timedelta(minutes=15))
-        return TokenResponse(
-            access_token=access_token,
-            token_type="bearer",
-            expires_in=15 * 60,
-            scope=rt.scope,
-        )
+        token = await self.token_service.refresh_token(rt.refresh_token)
+        return TokenResponse.model_validate(token)

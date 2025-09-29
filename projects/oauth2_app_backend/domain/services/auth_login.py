@@ -15,8 +15,11 @@ from ...impl.auth import (
     MismatchingStateError,
 )
 
-from ...impl.session_manager import Session, SessionManager
+from ..services.session_service import SessionService, Session
 from ...infra import transactional_session
+
+from ..exceptions import NotAuthenticatedException
+
 
 class OAuthLoginServiceConfig(AuthorizationCodeClientConfig):
     provider: str
@@ -28,25 +31,25 @@ class OAuthLoginService:
         self,
         cfg: OAuthLoginServiceConfig,
         client: AuthorizationCodeClient,
-        session_manager: SessionManager,
+        session_service: SessionService,
         user_service: UserService,
     ):
         self.cfg = cfg
         self.auth_provider = cfg.provider
         self.client = client
-        self.session_manager = session_manager
+        self.session_service = session_service
         self.user_service = user_service
 
     async def login(self, return_to: Optional[str] = None) -> str:
         """生成 OAuth2 授权 URL"""
         uri, state = self.client.create_authorization_url()
-        await self.session_manager.set_state(state)
+        await self.session_service.set_state(state)
         return uri
 
     async def callback(self, code: str, state: str) -> Session:
         """处理 OAuth2 回调"""
         # 1. 验证 state 参数
-        state_data = await self.session_manager.get_state(state)
+        state_data = await self.session_service.get_state(state)
         if not state_data:
             raise MismatchingStateError()
         # 2. 获取 token
@@ -61,7 +64,8 @@ class OAuthLoginService:
             user_info=user_info.model_dump(),
         )
         # 5. 存储令牌和用户信息到会话
-        return await self.session_manager.new_session(str(user.uuid))
+        await self.session_service.delete_state(state)
+        return await self.session_service.new_session(str(user.uuid))
 
     @transactional_session
     async def get_oauth_info(self, session: Session) -> LocalOAuthInfo:
@@ -70,9 +74,7 @@ class OAuthLoginService:
         )
         if not user or not auth:
             return None
-
         token = Token.model_validate(auth.credential)
-        print(token)
         if token.is_expired():
             token = await self.client.refresh_token(token.refresh_token)
             auth.credential = token.model_dump()
@@ -81,6 +83,20 @@ class OAuthLoginService:
             )
 
         return LocalOAuthInfo(user=user, token=token, user_info=auth.user_info)
+
+    @transactional_session
+    async def refresh_token(self, session: Session) -> Session:
+        user, auth = await self.user_service.get_user_and_auth_for_update(
+            session.user_id, self.auth_provider
+        )
+        if not user or not auth:
+            raise NotAuthenticatedException()
+        token = Token.model_validate(auth.credential)
+        token = await self.client.refresh_token(token.refresh_token)
+        auth.credential = token.model_dump()
+        await self.user_service.update_authentication(
+            auth.provider, auth.provider_id, token.model_dump()
+        )
 
 
 # stateful

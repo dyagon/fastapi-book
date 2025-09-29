@@ -56,7 +56,7 @@ async def get_client_info(
     token: str = Depends(oauth2_scheme),
 ):
     token_service = AppContainer.token_service()
-    return token_service.jwt_token_decode(token)
+    return token_service.validate_token(token)
 
 
 oauth2_auth_code_scheme = OAuth2AuthorizationCodeBearer(
@@ -69,8 +69,7 @@ async def get_user_info(
     token: str = Depends(oauth2_auth_code_scheme)
 ):
     token_service = AppContainer.token_service()
-    payload = token_service.jwt_token_decode(token)
-    print(payload)
+    payload = token_service.validate_token(token)
     scopes = payload.get("scope", "")
     if "get_user_info" not in scopes:
         raise HTTPException(status_code=403, detail="Insufficient scope")
@@ -101,3 +100,15 @@ async def get_user_info(
     else:
         # client credentials流程，返回token payload
         return payload
+
+
+@router.get("/admin/info")
+async def get_admin_info(
+    token: str = Depends(oauth2_auth_code_scheme)
+):
+    token_service = AppContainer.token_service()
+    payload = token_service.validate_token(token)
+    scopes = payload.get("scope", "")
+    if "get_admin_info" not in scopes:
+        raise HTTPException(status_code=403, detail="Insufficient scope")
+    return payload

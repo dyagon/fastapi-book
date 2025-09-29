@@ -43,14 +43,17 @@ def transactional_session(func):
             print(f"    -> (Transactional) New ASYNC session created: {id(session)}")
             token = _async_session_context.set(session)
             try:
-                return await func(*args, **kwargs)
+                result = await func(*args, **kwargs)
+                await session.commit()
+                return result
             except Exception:
                 await session.rollback()
                 raise
             finally:
                 print(f"    <- (Transactional) ASYNC Session closed: {id(session)}")
                 _async_session_context.reset(token)
-                await session.close()
+                if session.is_active:
+                    await session.close()
 
     return wrapper
 
@@ -69,6 +72,7 @@ def read_only_session(func):
             finally:
                 print(f"    <- (Read Only) ASYNC Session closed: {id(session)}")
                 _async_session_context.reset(token)
-                await session.close()
+                if session.is_active:
+                    await session.close()
 
     return wrapper

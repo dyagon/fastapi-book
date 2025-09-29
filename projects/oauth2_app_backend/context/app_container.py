@@ -16,6 +16,7 @@ from ..impl.session_manager import SessionManager
 from ..impl.repo.user import UserRepo
 from ..domain.services.user_service import UserService
 from ..domain.services.auth_login import OAuthLoginService, OAuthLoginServiceConfig
+from ..domain.services.session_service import SessionService
 
 
 class OAuth2ServiceConfig(BaseModel):
@@ -97,10 +98,15 @@ class Container(containers.DeclarativeContainer):
         user_repo=user_repo,
     )
 
+    session_service = providers.Singleton(
+        SessionService,
+        session_manager=session_manager,
+    )
+
     auth_login_service = providers.Singleton(
         OAuthLoginService,
         cfg=app_settings.oauth2.authorization_code,
         client=ac_client,
-        session_manager=session_manager,
+        session_service=session_service,
         user_service=user_service,
     )

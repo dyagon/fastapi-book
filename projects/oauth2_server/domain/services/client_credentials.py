@@ -25,11 +25,5 @@ class ClientCredentialsFlowService(OAuth2Service):
         cc.validate_client(client)
 
         # 3. generate token
-        token_data = cc.token_data()
-        access_token = self.token_service.jwt_token(token_data, timedelta(minutes=15))
-        return TokenResponse(
-            access_token=access_token,
-            token_type="bearer",
-            expires_in=15 * 60,
-            scope=cc.scope,
-        )
+        token = await self.token_service.generate_token(cc.client_id, cc.scope)
+        return TokenResponse.model_validate(token)

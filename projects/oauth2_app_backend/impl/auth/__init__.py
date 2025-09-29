@@ -89,7 +89,6 @@ class AuthorizationCodeClient:
     async def get_token(self, code: str) -> Token:
         try:
             token = await self._oauth2_client.exchange_code_for_tokens(code)
-            token["expires_at"] = int(time.time()) + token["expires_in"]
             return Token(**token)
         except httpx.HTTPStatusError as e:
             raise OAuthError(e.response.text) from e
@@ -97,7 +96,6 @@ class AuthorizationCodeClient:
     async def refresh_token(self, refresh_token: str) -> Token:
         try:
             token =  await self._oauth2_client.refresh_token(refresh_token)
-            token["expires_at"] = int(time.time()) + token["expires_in"]
             return Token(**token)
         except httpx.HTTPStatusError as e:
             raise OAuthError(e.response.text) from e
@@ -110,5 +108,16 @@ class AuthorizationCodeClient:
             )
             response.raise_for_status()
             return UserInfoDto(**response.json())
+        except httpx.HTTPStatusError as e:
+            raise OAuthError(e.response.text) from e
+
+    async def get_admin_info(self, access_token: str) -> dict:
+        url = f"{self._base_url}/admin/info"
+        try:
+            response = await self._client.get(
+                url, headers={"Authorization": f"Bearer {access_token}"}
+            )
+            response.raise_for_status()
+            return response.json()
         except httpx.HTTPStatusError as e:
             raise OAuthError(e.response.text) from e

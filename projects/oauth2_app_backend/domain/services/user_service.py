@@ -37,6 +37,14 @@ class UserService:
         return await self.user_repo.get_user_and_auth_for_update(uuid, provider)
 
     @transactional_session
+    async def update_authentication(
+        self, provider: str, provider_id: str, credential: dict
+    ) -> Authentication:
+        return await self.user_repo.update_authentication(
+            provider, provider_id, credential
+        )
+
+    @transactional_session
     async def get_or_create_user(
         self, provider: str, provider_id: str, credential: dict, user_info: dict
     ) -> User:
@@ -46,12 +54,15 @@ class UserService:
             or f"https://api.dicebear.com/7.x/avataaars/svg?seed={username}"
         )
         auth = await self.user_repo.get_auth(provider, provider_id)
-        if not auth:
+        if auth:
+            await self.user_repo.update_authentication(
+                provider, provider_id, credential
+            )
+        else:
+            # no auth, create user and auth
             user = await self.user_repo.create_user(username, avatar_url)
             auth = await self.user_repo.create_authentication(
-                user.uuid, provider, provider_id, credential, user_info
+                user.uuid, provider, provider_id, credential
             )
 
         return await self.user_repo.get_user_by_uuid(auth.user_uuid)
-
-

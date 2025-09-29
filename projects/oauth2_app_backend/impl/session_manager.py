@@ -1,97 +1,111 @@
+import time
 from secrets import token_urlsafe
 import uuid
 from pydantic import BaseModel
 from redis.asyncio import Redis
-from typing import Optional
+from typing import Optional, List, Dict
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 
 class Session(BaseModel):
     user_id: str
     session_id: str
-    created_at: datetime
-    last_activity_at: datetime
+    created_at: float
+    last_activity_at: float
 
-    def to_dict(self) -> dict:
-        return {
-            "user_id": self.user_id,
-            "session_id": self.session_id,
-            "created_at": self.created_at.timestamp(),
-            "last_activity_at": self.last_activity_at.timestamp(),
-        }
+    def login_time(self) -> str:
+        return datetime.fromtimestamp(self.created_at).strftime("%Y-%m-%d %H:%M:%S")
+
+    def last_activity_time(self) -> str:
+        return datetime.fromtimestamp(self.last_activity_at).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+
+
+CHECK_AND_REFRESH_SCRIPT = """
+if redis.call('EXISTS', KEYS[1]) == 0 then
+    return nil
+end
+local created_at = redis.call('HGET', KEYS[1], 'created_at')
+if not created_at then
+    redis.call('DEL', KEYS[1])
+    return nil
+end
+local absolute_expiry_time = tonumber(created_at) + tonumber(ARGV[1])
+if absolute_expiry_time < tonumber(ARGV[3]) then
+    redis.call('DEL', KEYS[1])
+    return nil
+end
+redis.call('HSET', KEYS[1], 'last_activity_at', ARGV[3])
+redis.call('EXPIRE', KEYS[1], ARGV[2])
+return redis.call('HGETALL', KEYS[1])
+"""
 
 
 class SessionManager:
 
-    prefix: str = "app:session:"
-    ttl: timedelta = timedelta(minutes=20)
-    abs_ttl: timedelta = timedelta(days=7)
-
     def __init__(self, redis_client: Redis):
         self.redis_client = redis_client
+        self.prefix = "app:session:"
+        self.state_prefix = "app:state:"
+        self.rel_ttl = 20 * 60  # 20 minutes
+        self.abs_ttl = 7 * 24 * 60 * 60  # 7 days
+        self.check_and_refresh_script = self.redis_client.register_script(
+            CHECK_AND_REFRESH_SCRIPT
+        )
+
+    def _key(self, session_id: str) -> str:
+        return self.prefix + session_id
+
+    def _state_key(self, state: str) -> str:
+        return self.state_prefix + state
 
     async def new_session(self, user_id: str) -> Session:
         session_id = str(uuid.uuid4())
         session = Session(
             user_id=user_id,
             session_id=session_id,
-            created_at=datetime.now(timezone.utc),
-            last_activity_at=datetime.now(timezone.utc),
+            created_at=time.time(),
+            last_activity_at=time.time(),
         )
         await self.redis_client.hset(
-            self.prefix + session_id, mapping=session.to_dict()
+            self._key(session_id), mapping=session.model_dump()
         )
-        await self.redis_client.expire(self.prefix + session_id, self.ttl)
+        await self.redis_client.expire(self._key(session_id), self.rel_ttl)
         return session
 
-    async def get_session(self, session_data: dict) -> Optional[Session]:
-        if not session_data or not session_data.get("session_id"):
+    def _hgetall_to_dict(self, result: List[str]) -> Dict[str, str]:
+        """Converts the flat list from HGETALL into a dictionary."""
+        if not result:
+            return {}
+        return dict(zip(result[0::2], result[1::2]))
+
+    async def check_and_refresh_session(self, session_id: str) -> Optional[Session]:
+        """
+        原子地检查并刷新 session (使用浮点秒数)。
+        """
+        if not session_id:
             return None
-        return await self._get_session(session_data.get("session_id"))
-
-    async def _get_session(self, session_id: str) -> Optional[Session]:
-        if not await self.redis_client.exists(self.prefix + session_id):
-            return None
-
-        session_data = await self.redis_client.hgetall(self.prefix + session_id)
-        session = Session.model_validate(session_data)
-
-        # check if session is expired
-        if session.last_activity_at + self.ttl < datetime.now(timezone.utc):
-            await self.redis_client.delete(self.prefix + session_id)
-            return None
-
-        if session.created_at + self.abs_ttl < datetime.now(timezone.utc):
-            await self.redis_client.delete(self.prefix + session_id)
-            return None
-
-        await self.redis_client.expire(self.prefix + session_id, self.ttl)
-        return session
-
-    async def set_session(self, session_id: str, session: Session):
-        await self.redis_client.hset(
-            self.prefix + session_id, mapping=session.model_dump()
+        key = self._key(session_id)
+        # EVALSHA 参数对应新的 Lua 脚本
+        result = await self.check_and_refresh_script(
+            keys=[key],
+            args=[self.abs_ttl, self.rel_ttl, time.time()],
         )
-        await self.redis_client.expire(self.prefix + session_id, self.ttl)
-
-    async def update_session_timestamp(self, session_id: str):
-        await self.redis_client.hset(
-            self.prefix + session_id, "last_activity_at", datetime.now(timezone.utc)
-        )
-        await self.redis_client.expire(self.prefix + session_id, self.ttl)
+        if not result:
+            return None
+        return Session.model_validate(self._hgetall_to_dict(result))
 
     async def delete_session(self, session_id: str):
-        await self.redis_client.delete(self.prefix + session_id)
+        await self.redis_client.delete(self._key(session_id))
 
     ## state manage
-    async def set_state(
-        self, state: str, expires_delta: timedelta = timedelta(minutes=5)
-    ):
-        await self.redis_client.set(self.prefix + state, state, expires_delta)
+    async def set_state(self, state: str, expires_delta: int = 5 * 60):
+        await self.redis_client.set(self._state_key(state), state, expires_delta)
 
     async def get_state(self, state: str) -> Optional[str]:
-        return await self.redis_client.get(self.prefix + state)
+        return await self.redis_client.get(self._state_key(state))
 
     async def delete_state(self, state: str):
-        await self.redis_client.delete(self.prefix + state)
+        await self.redis_client.delete(self._state_key(state))

@@ -1,6 +1,6 @@
 from fastapi import Request
 
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from ..domain.exceptions import (
     SessionException,
     NotAuthenticatedException,
@@ -18,7 +18,6 @@ async def session_exception_handler(request: Request, exc: SessionException):
         exc,
         (
             NotAuthenticatedException,
-            SessionExpiredException,
             InvalidCredentialsException,
             MissingSessionTokenException,
         ),
@@ -26,6 +25,8 @@ async def session_exception_handler(request: Request, exc: SessionException):
         status_code = 401
     elif isinstance(exc, PermissionDeniedException):
         status_code = 403
+    elif isinstance(exc, SessionExpiredException):
+        return RedirectResponse(url="/", status_code=302)
 
     return JSONResponse(
         status_code=status_code,

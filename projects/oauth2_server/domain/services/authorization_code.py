@@ -12,7 +12,6 @@ from ..models.user import UserInDB
 from ..exception import InvalidRequestException, UnauthorizedClientException
 
 
-
 class AuthCodeData(BaseModel):
     user_id: str
     client_id: str
@@ -49,30 +48,10 @@ class AuthorizationCodeFlowService(OAuth2Service):
         auth_code_data = AuthCodeData.model_validate(data)
 
         user_id = auth_code_data.user_id
-
-        token_data = {
-            "sub": user_id,
-            "scope": auth_code_data.scope,
-            "client_id": auth_code_data.client_id,
-        }
-
-        access_token = self.token_service.jwt_token(token_data, timedelta(minutes=15))
-        refresh_token_data = {
-            "user_id": user_id,
-            "client_id": auth_code_data.client_id,
-            "scope": auth_code_data.scope,
-            "issue_at": datetime.now(timezone.utc).isoformat(),
-        }
-        refresh_token = await self.token_service.opaque_token(
-            refresh_token_data, timedelta(days=7)
+        token = await self.token_service.generate_token(
+            user_id, auth_code_data.scope, auth_code_data.client_id
         )
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer",
-            expires_in=15 * 60,
-            scope=auth_code_data.scope,
-        )
+        return TokenResponse.model_validate(token)
 
     async def validate_authorize_request(self, auth_request: AuthorizeRequestQuery):
 
@@ -153,7 +132,9 @@ class AuthorizationCodeFlowService(OAuth2Service):
             code_challenge_method=auth_request.code_challenge_method,
         )
         data = auth_code_data.model_dump()
-        auth_code = await self.token_service.generate_code(data, timedelta(minutes=5))
+        auth_code = await self.token_service.generate_code(data)
+
+        print(auth_code)
 
         # 构建成功重定向URL
         success_params = {"code": auth_code}

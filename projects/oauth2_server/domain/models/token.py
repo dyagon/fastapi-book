@@ -49,13 +49,6 @@ class ClientCredentials(TokenIssuer):
         if self.scope and self.scope not in client.scopes:
             raise UnauthorizedClientException(f"Client {self.client_id} has invalid scope")
 
-    def token_data(self) -> dict:
-        return {
-            "sub": self.client_id,
-            "scopes": self.scope,
-            "client_id": self.client_id,
-        }
-    
 class AuthorizationCode(TokenIssuer):
     code: str
     redirect_uri: str

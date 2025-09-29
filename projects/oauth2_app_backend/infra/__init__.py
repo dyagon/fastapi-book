@@ -8,7 +8,6 @@ from redis.asyncio import Redis
 
 from .redis import redis_client
 from .db import (
-    session_maker,
     engine,
     transactional_session,
     read_only_session,
@@ -32,13 +31,17 @@ class AppInfra:
 
 
     async def dispose(self):
+        print("Disposing infra...")
         if self.async_client:
+            print("Disposing async client...")
             await self.async_client.aclose()
         if self.redis_client:
+            print("Disposing redis client...")
             await self.redis_client.aclose()
         if self.engine:
+            print("Disposing engine...")
             await self.engine.dispose()
-
+        print("Infra disposed")
 
 infra = AppInfra()
 

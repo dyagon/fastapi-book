@@ -174,7 +174,16 @@ class UserRepo(Repository):
         )
         stmt = stmt.values(credential=credential)
         await self.session.execute(stmt)
-        return await self.get_auth(provider, provider_id)
+
+    async def update_authentication_user_info(
+        self, provider: str, provider_id: str, user_info: dict
+    ) -> Authentication:
+        stmt = update(AuthenticationPO).where(
+            AuthenticationPO.provider == provider,
+            AuthenticationPO.provider_id == provider_id,
+        )
+        stmt = stmt.values(user_info=user_info)
+        await self.session.execute(stmt)
 
     async def delete_authentication(self, provider: str, provider_id: str):
         stmt = delete(AuthenticationPO).where(

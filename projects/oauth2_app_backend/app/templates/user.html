@@ -33,6 +33,24 @@
         .api-card h4 { margin: 0 0 0.5rem 0; color: #495057; }
         .api-card p { margin: 0.5rem 0; color: #6c757d; font-size: 0.9rem; }
         .clearfix::after { content: ""; display: table; clear: both; }
+        
+        /* 认证信息表格样式 */
+        .table-container { overflow-x: auto; margin: 1rem 0; }
+        .auth-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .auth-table th { background: #f8f9fa; padding: 1rem; text-align: left; font-weight: 600; color: #495057; border-bottom: 2px solid #dee2e6; }
+        .auth-table td { padding: 1rem; border-bottom: 1px solid #dee2e6; vertical-align: top; }
+        .auth-table tr:hover { background: #f8f9fa; }
+        .status-active { color: #28a745; font-weight: 600; }
+        .status-inactive { color: #dc3545; font-weight: 600; }
+        .btn-sm { padding: 0.5rem 1rem; font-size: 0.875rem; }
+        .credential-detail { background: #f8f9fa; }
+        .credential-content { padding: 1rem; }
+        .credential-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin: 1rem 0; }
+        .credential-item { background: white; padding: 1rem; border-radius: 4px; border: 1px solid #dee2e6; display: flex; align-items: center; justify-content: space-between; }
+        .credential-item strong { color: #495057; margin-right: 0.5rem; }
+        .token-value { background: #f1f1f1; padding: 0.25rem 0.5rem; border-radius: 3px; font-family: monospace; font-size: 0.875rem; }
+        .btn-copy { padding: 0.25rem 0.5rem; font-size: 0.75rem; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; margin-left: 0.5rem; }
+        .btn-copy:hover { background: #0056b3; }
     </style>
 </head>
 <body>
@@ -54,21 +72,97 @@
             <div class="user-details">
                 <h2 class="user-name">{{ user.username }}</h2>
                 <div class="user-meta"><strong>用户ID:</strong> {{ user.uuid }}</div>
-                <div class="user-meta"><strong>权限范围:</strong> {{ scopes | join(', ') if scopes else '无' }}</div>
+                <div class="user-meta"><strong>权限范围:</strong> 
+                    {% if auths and auths[0].credential and auths[0].credential.get('scope') %}
+                        {{ auths[0].credential.get('scope') }}
+                    {% else %}
+                        无
+                    {% endif %}
+                </div>
             </div>
         </div>
+
+        <!-- Session Information -->
+        {% if session %}
+        <div class="auth-info">
+            <h3 class="section-title">会话信息</h3>
+            <div class="api-card">
+                <h4>当前会话</h4>
+                <p><strong>会话ID:</strong> {{ session.session_id }}</p>
+                <p><strong>登录时间:</strong> {{ session.login_time() }}</p>
+                <p><strong>上次活动时间:</strong> {{ session.last_activity_time() }}</p>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Authentication Information -->
         {% if auths %}
         <div class="auth-info">
             <h3 class="section-title">认证信息</h3>
-            {% for auth in auths %}
-            <div class="api-card">
-                <h4>{{ auth.provider | title }} 认证</h4>
-                <p><strong>提供商ID:</strong> {{ auth.provider_id }}</p>
-                <p><strong>认证时间:</strong> {{ auth.credentials.get('created_at', '未知') if auth.credentials else '未知' }}</p>
+            <div class="table-container">
+                <table class="auth-table">
+                    <thead>
+                        <tr>
+                            <th>认证提供商</th>
+                            <th>提供商ID</th>
+                            <th>令牌状态</th>
+                            <th>过期时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for auth in auths %}
+                        <tr>
+                            <td>{{ auth.provider | title }}</td>
+                            <td>{{ auth.provider_id }}</td>
+                            <td>
+                                {% if auth.credential and auth.credential.get('access_token') %}
+                                    <span class="status-active">有效</span>
+                                {% else %}
+                                    <span class="status-inactive">无效</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if auth.credential and auth.credential.get('expires_at') %}
+                                    <span class="expiry-time" data-timestamp="{{ auth.credential.get('expires_at') }}">{{ auth.credential.get('expires_at') }}</span>
+                                {% elif auth.credential and auth.credential.get('expires_in') %}
+                                    <span class="expiry-time" data-expires-in="{{ auth.credential.get('expires_in') }}">{{ auth.credential.get('expires_in') }}秒后过期</span>
+                                {% else %}
+                                    未知
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button onclick="togglecredential('{{ loop.index }}')" class="btn btn-sm">查看详情</button>
+                            </td>
+                        </tr>
+                        <tr id="credential-{{ loop.index }}" class="credential-detail hidden">
+                            <td colspan="5">
+                                <div class="credential-content">
+                                    <h4>认证凭据详情</h4>
+                                    <div class="credential-grid">
+                                        {% if auth.credential %}
+                                            {% for key, value in auth.credential.items() %}
+                                            <div class="credential-item">
+                                                <strong>{{ key | title }}:</strong>
+                                                {% if key in ['access_token', 'refresh_token', 'id_token'] %}
+                                                    <code class="token-value">{{ value[:20] }}...{{ value[-10:] if value|length > 30 else value }}</code>
+                                                    <button onclick="copyToClipboard('{{ value }}')" class="btn-copy">复制</button>
+                                                {% else %}
+                                                    <span>{{ value }}</span>
+                                                {% endif %}
+                                            </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <p>无认证凭据信息</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            {% endfor %}
         </div>
         {% endif %}
         
@@ -138,7 +232,7 @@
 
         function showLoading(show = true) {
             const loading = document.getElementById('loading');
-            const buttons = ['user-info-btn', 'admin-info-btn', 'refresh-btn', 'client-credentials-btn'];
+            const buttons = ['user-info-btn', 'admin-info-btn', 'refresh-btn', 'client-credential-btn'];
             
             if (show) {
                 loading.style.display = 'inline';
@@ -217,16 +311,74 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showMessage('令牌刷新成功!', 'success');
+                    showMessage('令牌刷新成功! 页面即将刷新...', 'success');
+                    // 延迟1秒后刷新页面，让用户看到成功消息
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
                 } else {
                     throw new Error(data.detail || '刷新令牌失败');
                 }
             } catch (error) {
                 console.error('刷新令牌时出错:', error);
                 showMessage(`错误: ${error.message}`, 'error');
-            } finally {
                 showLoading(false);
             }
+        }
+
+        // 认证信息详情展开/收起功能
+        function togglecredential(index) {
+            const detailRow = document.getElementById(`credential-${index}`);
+            const button = event.target;
+            
+            if (detailRow.classList.contains('hidden')) {
+                detailRow.classList.remove('hidden');
+                button.textContent = '收起详情';
+            } else {
+                detailRow.classList.add('hidden');
+                button.textContent = '查看详情';
+            }
+        }
+
+        // 复制到剪贴板功能
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showMessage('已复制到剪贴板', 'success');
+            } catch (err) {
+                // 降级方案：使用传统的复制方法
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showMessage('已复制到剪贴板', 'success');
+                } catch (err) {
+                    showMessage('复制失败，请手动复制', 'error');
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+
+        // 格式化过期时间为ISO格式
+        function formatExpiryTime() {
+            const expiryElements = document.querySelectorAll('.expiry-time');
+            expiryElements.forEach(element => {
+                const timestamp = element.getAttribute('data-timestamp');
+                const expiresIn = element.getAttribute('data-expires-in');
+                
+                if (timestamp) {
+                    // 如果是Unix时间戳
+                    const date = new Date(parseInt(timestamp) * 1000);
+                    element.textContent = date.toISOString();
+                } else if (expiresIn) {
+                    // 如果是相对时间（秒数）
+                    const now = new Date();
+                    const expiryDate = new Date(now.getTime() + parseInt(expiresIn) * 1000);
+                    element.textContent = expiryDate.toISOString();
+                }
+            });
         }
 
         // Initialize page
@@ -240,6 +392,9 @@
                 // Clean up URL
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
+            
+            // 格式化过期时间显示
+            formatExpiryTime();
         });
     </script>
 </body>

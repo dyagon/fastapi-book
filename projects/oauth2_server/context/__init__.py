@@ -13,11 +13,13 @@ from ..domain.services import (
     RefreshTokenFlowService,
 )
 from ..impl.repo import ClientRepo, UserRepo
+from ..impl.token_manager import TokenManager
 
 
 class AppSettings(BaseModel):
     token_secret_key: str
     token_algorithm: str
+
 
 class Settings(InfraSettings):
     app: AppSettings
@@ -31,11 +33,15 @@ infra = AppInfra(settings)
 class AppContainer(containers.DeclarativeContainer):
     redis_client = providers.Singleton(infra.redis.get_redis)
 
+    token_manager = providers.Singleton(TokenManager, redis=redis_client)
+
     token_service = providers.Singleton(
         TokenService,
-        redis_client=redis_client,
+        token_manager=token_manager,
         secret_key=settings.app.token_secret_key,
         algorithm=settings.app.token_algorithm,
+        iss="http://localhost:8000",
+        aud="http://localhost:8000",
     )
 
     client_repo = providers.Singleton(ClientRepo)

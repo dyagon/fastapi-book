@@ -16,11 +16,6 @@ from ...context.app_container import (
     ClientCredentialsClient,
 )
 
-from ..service import get_user_and_auths
-
-from ...domain.services.auth_login import OAuthLoginService
-
-
 router = APIRouter()
 
 
@@ -63,7 +58,7 @@ async def callback(
 
     auth_login_service = Container.auth_login_service()
     session = await auth_login_service.callback(code, state)
-    request.session.update(session.to_dict())
+    request.session.update(session.model_dump())
 
     return RedirectResponse(url="/", status_code=302)
 
@@ -81,22 +76,25 @@ async def logout(request: Request):
 
 @router.get("/", response_class=HTMLResponse)
 async def home(request: Request, error: Optional[str] = Query(None)):
-    """Home page."""
-    session_data = request.session
-    user, auths = await get_user_and_auths(session_data)
-    if user:
+    session_service = Container.session_service()
+    try:
+        session = await session_service.check_session(request.session)
+        request.session.update(session.model_dump())
+        user_service = Container.user_service()
+        user, auths = await user_service.get_user_and_auths(session.user_id)
+        if user:
+            context = {
+                        "request": request,
+                        "user": user,
+                        "session": session,
+                        "auths": auths,
+                        "error": error,
+                    }
+            return templates.TemplateResponse("user.html", context)
+    except Exception as e:
+        print(e)
         context = {
             "request": request,
-            "user": user,
-            "auths": auths,
             "error": error,
         }
-        return templates.TemplateResponse("user.html", context)
-
-    context = {
-        "request": request,
-        "user": session_data.get("user") if session_data else None,
-        "error": error,
-    }
-
-    return templates.TemplateResponse("index.html", context)
+        return templates.TemplateResponse("index.html", context)

@@ -19,6 +19,7 @@ OAuth2ErrorCodeMap = {
 
 
 async def oauth2_exception_handler(request: Request, exc: OAuth2Exception):
+    print(exc)
     return JSONResponse(
         status_code=OAuth2ErrorCodeMap[exc.error],
         content={"error": exc.error, "error_description": exc.error_description},
